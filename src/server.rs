@@ -158,13 +158,24 @@ async fn get_events_of_subject(
 
 async fn get_event_of_subject(
     Extension(kore_api): Extension<Arc<KoreApi>>,
-    Path(subject_id): Path<String>,
-    Path(sn): Path<u64>,
+    Path((subject_id, sn)): Path<(String, u64)>
 ) -> Result<Json<NodeSigned<EventContentResponse>>, Errors> {
     match kore_api.get_event_of_subject(&subject_id, sn).await {
         Ok(response) => Ok(Json(response)),
         Err(e) => Err(Errors::Kore(e.to_string())),
     }
+}
+
+async fn get_controller_id(
+    Extension(kore_api): Extension<Arc<KoreApi>>,
+) -> Json<String> {
+    Json(kore_api.get_controller_id())
+}
+
+async fn get_peer_id(
+    Extension(kore_api): Extension<Arc<KoreApi>>,
+) -> Json<String> {
+    Json(kore_api.get_peer_id())
 }
 
 pub fn build_routes(kore_api: KoreApi) -> Router {
@@ -203,6 +214,14 @@ pub fn build_routes(kore_api: KoreApi) -> Router {
         .route(
             "/subjects/:subject_id/events/:sn",
             get(get_event_of_subject),
+        )
+        .route(
+            "/controller-id",
+            get(get_controller_id),
+        )
+        .route(
+            "/peer-id",
+            get(get_peer_id),
         )
         .layer(
             ServiceBuilder::new()

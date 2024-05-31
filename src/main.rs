@@ -6,7 +6,7 @@ mod util;
 
 use std::net::SocketAddr;
 
-use kore_node::{config::build::build_config, KoreNode, LevelDBNode};
+use kore_node::{config::build::build_config, KoreNode, SqliteNode};
 use middleware::middlewares::tower_trace;
 use server::build_routes;
 use util::logger::build_logger;
@@ -20,7 +20,7 @@ async fn main() {
         .unwrap();
 
     let kore_settings = build_config(true, "");
-    let node = LevelDBNode::build(kore_settings, "password").unwrap();
+    let node = SqliteNode::build(kore_settings, "password").unwrap();
     axum::serve(
         listener,
         tower_trace(build_routes(node.api().clone()))
