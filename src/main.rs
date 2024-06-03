@@ -7,11 +7,13 @@ mod config;
 
 use std::net::SocketAddr;
 
+use axum::http::{header, Method};
 use clap::Parser;
 use config::env::build_address;
 use kore_node::{clap, config::{build::{build_config, build_password}, command::Args}, KoreNode, SqliteNode};
 use middleware::middlewares::tower_trace;
 use server::build_routes;
+use tower_http::cors::{Any, CorsLayer};
 use util::logger::build_logger;
 
 #[tokio::main]
@@ -35,9 +37,15 @@ async fn main() {
     let kore_settings = build_config(args.env_config, &args.file_path);
     // Node.
     let node = SqliteNode::build(kore_settings, &password).unwrap();
+
+    let cors = CorsLayer::new()
+    .allow_methods([Method::GET, Method::POST, Method::PUT, Method::PATCH])
+    .allow_headers([header::CONTENT_TYPE])
+    .allow_origin(Any);
+
     axum::serve(
         listener,
-        tower_trace(build_routes(node.api().clone()))
+        tower_trace(build_routes(node.api().clone())).layer(cors)
             .into_make_service_with_connect_info::<SocketAddr>(),
     )
     .await
