@@ -1,6 +1,7 @@
 /target
 Cargo.lock
-config*
+config.*
+config2.*
 /node*
 /log
 /examples
