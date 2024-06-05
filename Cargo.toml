@@ -18,4 +18,4 @@ tracing = "0.1.40"
 utoipa = { version = "4.2.3", features = ["axum_extras"] }
 
 # Kore
-kore-node = { git = "https://github.com/kore-ledger/kore-node.git", default-features = false, features = ["sqlite", "prometheus"], version = "0.5.5"}
+kore-node = { git = "https://github.com/kore-ledger/kore-node.git", default-features = false, features = ["leveldb", "prometheus"], version = "0.5.6"}

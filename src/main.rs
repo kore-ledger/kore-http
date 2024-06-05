@@ -16,7 +16,7 @@ use kore_node::{
         build::{build_config, build_file_path, build_password},
         command::Args,
     },
-    KoreNode, SqliteNode,
+    KoreNode, LevelDBNode,
 };
 use middleware::middlewares::tower_trace;
 use server::build_routes;
@@ -49,7 +49,7 @@ async fn main() {
     // Settings.
     let kore_settings = build_config(args.env_config, &file_path);
     // Node.
-    let node = SqliteNode::build(kore_settings, &password).unwrap();
+    let node = LevelDBNode::build(kore_settings, &password).unwrap();
     node.bind_with_shutdown(signal::ctrl_c());
 
     let cors = CorsLayer::new()
@@ -67,7 +67,7 @@ async fn main() {
     .with_graceful_shutdown(async move {
         loop {
             tokio::select! {
-                _ = node.cancellation.cancelled() => {
+                _ = node.token().cancelled() => {
                     log::debug!("Shutdown received");
                     break;
                 }
