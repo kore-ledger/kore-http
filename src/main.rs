@@ -1,18 +1,26 @@
 mod common;
+mod config;
 mod error;
 mod middleware;
 mod server;
 mod util;
-mod config;
 
 use std::net::SocketAddr;
 
 use axum::http::{header, Method};
 use clap::Parser;
 use config::env::build_address;
-use kore_node::{clap, config::{build::{build_config, build_file_path, build_password}, command::Args}, KoreNode, SqliteNode};
+use kore_node::{
+    clap,
+    config::{
+        build::{build_config, build_file_path, build_password},
+        command::Args,
+    },
+    KoreNode, SqliteNode,
+};
 use middleware::middlewares::tower_trace;
 use server::build_routes;
+use tokio::signal;
 use tower_http::cors::{Any, CorsLayer};
 use util::logger::build_logger;
 
@@ -33,7 +41,7 @@ async fn main() {
     if file_path.is_empty() {
         file_path = build_file_path();
     }
-    
+
     let listener = tokio::net::TcpListener::bind(build_address())
         .await
         .unwrap();
@@ -42,17 +50,30 @@ async fn main() {
     let kore_settings = build_config(args.env_config, &file_path);
     // Node.
     let node = SqliteNode::build(kore_settings, &password).unwrap();
+    node.bind_with_shutdown(signal::ctrl_c());
 
     let cors = CorsLayer::new()
-    .allow_methods([Method::GET, Method::POST, Method::PUT, Method::PATCH])
-    .allow_headers([header::CONTENT_TYPE])
-    .allow_origin(Any);
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::PATCH])
+        .allow_headers([header::CONTENT_TYPE])
+        .allow_origin(Any);
 
+    let api = node.api().clone();
     axum::serve(
         listener,
-        tower_trace(build_routes(node.api().clone())).layer(cors)
+        tower_trace(build_routes(api))
+            .layer(cors)
             .into_make_service_with_connect_info::<SocketAddr>(),
     )
+    .with_graceful_shutdown(async move {
+        loop {
+            tokio::select! {
+                _ = node.cancellation.cancelled() => {
+                    log::debug!("Shutdown received");
+                    break;
+                }
+            }
+        }
+    })
     .await
-    .unwrap();
+    .unwrap()
 }
