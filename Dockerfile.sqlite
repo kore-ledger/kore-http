@@ -1,5 +1,5 @@
-#docker build --platform linux/amd64 -t kore-http-sqlite:amd64 --target amd64 -f ./Dockerfile.sqlite . 
-#docker build --platform linux/arm64 -t kore-http-sqlite:arm64 --target arm64 -f ./Dockerfile.sqlite . 
+#docker build --platform linux/amd64 -t koreadmin/kore-http:amd64-sqlite --target amd64 -f ./Dockerfile.sqlite . 
+#docker build --platform linux/arm64 -t koreadmin/kore-http:arm64-sqlite --target arm64 -f ./Dockerfile.sqlite . 
 
 # Etapa de compilación para AMD64
 FROM rust:1.78-slim-buster AS builder-amd64

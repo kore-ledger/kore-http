@@ -65,12 +65,9 @@ async fn main() {
             .into_make_service_with_connect_info::<SocketAddr>(),
     )
     .with_graceful_shutdown(async move {
-        loop {
-            tokio::select! {
-                _ = node.token().cancelled() => {
-                    log::debug!("Shutdown received");
-                    break;
-                }
+        tokio::select! {
+            _ = node.token().cancelled() => {
+                log::debug!("Shutdown received");
             }
         }
     })
