@@ -20,7 +20,7 @@ use crate::doc::utoipa::ApiDoc;
 #[cfg(feature = "doc")]
 use utoipa::OpenApi;
 #[cfg(feature = "doc")]
-use utoipa_swagger_ui::SwaggerUi;
+use utoipa_rapidoc::RapiDoc;
 
 /// Send event request
 ///
@@ -936,7 +936,7 @@ pub fn build_routes(kore_api: KoreApi) -> Router {
                 .layer(Extension(kore_api)),
         );
     #[cfg(feature = "doc")]
-    return Router::new().merge(routes).merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()));
+    return Router::new().merge(routes).merge(RapiDoc::with_openapi("/api-docs/openapi.json", ApiDoc::openapi()).path("/rapidoc"));
     #[cfg(not(feature = "doc"))]
     Router::new().merge(routes)
 }

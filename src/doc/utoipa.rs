@@ -51,7 +51,6 @@ use crate::server::*;
             PreauthorizedSubjectsResponse
         )
     ),
-    security(),
     tags(
         (name = "Approvals"),
         (name = "Requests"),
