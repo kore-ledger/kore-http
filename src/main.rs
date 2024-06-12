@@ -5,6 +5,9 @@ mod middleware;
 mod server;
 mod util;
 
+#[cfg(feature = "doc")]
+mod doc;
+
 use std::net::SocketAddr;
 
 use axum::http::{header, Method};
