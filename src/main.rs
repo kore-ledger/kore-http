@@ -18,9 +18,14 @@ use kore_node::{
     config::{
         build::{build_config, build_file_path, build_password},
         command::Args,
-    },
-    KoreNode, LevelDBNode,
+    }
 };
+#[cfg(feature = "leveldb")]
+use kore_node::{KoreNode, LevelDBNode};
+
+#[cfg(feature = "sqlite")]
+use kore_node::{KoreNode, SqliteNode};
+
 use middleware::middlewares::tower_trace;
 use server::build_routes;
 use tokio::signal;
@@ -52,7 +57,11 @@ async fn main() {
     // Settings.
     let kore_settings = build_config(args.env_config, &file_path);
     // Node.
+    #[cfg(feature = "leveldb")]
     let node = LevelDBNode::build(kore_settings, &password).unwrap();
+    #[cfg(feature = "sqlite")]
+    let node = SqliteNode::build(kore_settings, &password).unwrap();
+    
     node.bind_with_shutdown(signal::ctrl_c());
 
     let cors = CorsLayer::new()

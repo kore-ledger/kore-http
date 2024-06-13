@@ -11,12 +11,9 @@ use std::{
 };
 use tower::ServiceBuilder;
 
-use crate::{
-    common::IPSMaxConnectState, error::Errors,
-    middleware::middlewares::limit_ip_request,
-};
 #[cfg(feature = "doc")]
 use crate::doc::utoipa::ApiDoc;
+use crate::{common::IPSMaxConnectState, error::Errors, middleware::middlewares::limit_ip_request};
 #[cfg(feature = "doc")]
 use utoipa::OpenApi;
 #[cfg(feature = "doc")]
@@ -936,7 +933,479 @@ pub fn build_routes(kore_api: KoreApi) -> Router {
                 .layer(Extension(kore_api)),
         );
     #[cfg(feature = "doc")]
-    return Router::new().merge(routes).merge(RapiDoc::with_openapi("/api-docs/openapi.json", ApiDoc::openapi()).path("/rapidoc"));
+    return Router::new().merge(routes).merge(
+        RapiDoc::with_openapi("/api-docs/openapi.json", ApiDoc::openapi()).path("/rapidoc"),
+    );
     #[cfg(not(feature = "doc"))]
     Router::new().merge(routes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::SocketAddr;
+
+    use axum::http::{header, Method, StatusCode};
+    use kore_node::{config::build::build_config, model::EventRequestResponse};
+
+    #[cfg(feature = "leveldb")]
+    use kore_node::{KoreNode, LevelDBNode};
+
+    #[cfg(feature = "sqlite")]
+    use kore_node::{KoreNode, SqliteNode};
+    use serde_json::json;
+    use serial_test::serial;
+    use tempfile::{tempdir, TempDir};
+    use tower_http::cors::{Any, CorsLayer};
+
+    use crate::middleware::middlewares::tower_trace;
+
+    async fn build_server(tempdir: &TempDir) {
+        // Create tempdir
+        let tempdir_path = tempdir.path().to_str().unwrap();
+
+        let json = r#"
+        {
+            "kore": {
+              "network": {
+                  "listen_addresses": ["/ip4/0.0.0.0/tcp/50000"],
+                  "routing": {
+                    "boot_nodes": [""]
+                  }
+              },
+              "node": {
+                "smartcontracts_directory": "./node1/contracts"
+              },
+              "db_path": "./node1/database",
+              "keys_path": "./node1/keys",
+              "prometheus": "0.0.0.0:3050"
+            }
+          }
+          "#;
+
+        // update json with tmpdir path
+        let updated_json = json
+            .replace("./node1/contracts", &format!("{}/contracts", tempdir_path))
+            .replace("./node1/database", &format!("{}/database", tempdir_path))
+            .replace("./node1/keys", &format!("{}/keys", tempdir_path));
+
+        // write json
+        let temp_file_path = tempdir.path().join("config.json");
+        std::fs::write(&temp_file_path, updated_json.as_bytes()).unwrap();
+
+        let kore_settings = build_config(false, temp_file_path.to_str().unwrap());
+
+        // Nodes
+        #[cfg(feature = "leveldb")]
+        let node = LevelDBNode::build(kore_settings, "password").unwrap();
+        #[cfg(feature = "sqlite")]
+        let node = SqliteNode::build(kore_settings, "password").unwrap();
+
+        // Server
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:7777")
+            .await
+            .unwrap();
+
+        let cors = CorsLayer::new()
+            .allow_methods([Method::GET, Method::POST, Method::PUT, Method::PATCH])
+            .allow_headers([header::CONTENT_TYPE])
+            .allow_origin(Any);
+
+        let api = node.api().clone();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                tower_trace(build_routes(api))
+                    .layer(cors)
+                    .into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .with_graceful_shutdown(async move {
+                tokio::select! {
+                    _ = node.token().cancelled() => {
+                        log::debug!("Shutdown received");
+                    }
+                }
+            })
+            .await
+            .unwrap()
+        });
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn event_requests() {
+        let tempdir = tempdir().unwrap();
+        build_server(&tempdir).await;
+
+        let json = json!({
+          "request": {
+            "Create": {
+              "governance_id": "",
+              "schema_id": "governance",
+              "namespace": "",
+              "name": "EasyTutorial"
+            }
+          }
+        });
+
+        let client = reqwest::Client::new();
+
+        // post event requests
+        let response = client
+            .post("http://localhost:7777/event-requests")
+            .json(&json)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: EventRequestResponse = response.json().await.unwrap();
+        assert!(!body.request_id.is_empty());
+        let request_id = body.request_id;
+
+        // get event request id
+        let response = client
+            .get(format!(
+                "http://localhost:7777/event-requests/{}",
+                request_id
+            ))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: NodeSignedEventRequest = response.json().await.unwrap();
+        assert!(body.signature.is_some());
+
+        // get event request id state
+        let response = client
+            .get(format!(
+                "http://localhost:7777/event-requests/{}/state",
+                request_id
+            ))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: NodeKoreRequestState = response.json().await.unwrap();
+        assert!(!body.id.is_empty());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn peer_id() {
+        let tempdir = tempdir().unwrap();
+        build_server(&tempdir).await;
+
+        let client = reqwest::Client::new();
+
+        // get peer id
+        let response = client
+            .get("http://localhost:7777/peer-id")
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: String = response.json().await.unwrap();
+        assert!(!body.is_empty());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn controller_id() {
+        let tempdir = tempdir().unwrap();
+        build_server(&tempdir).await;
+
+        let client = reqwest::Client::new();
+
+        // get controller id
+        let response = client
+            .get("http://localhost:7777/controller-id")
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: String = response.json().await.unwrap();
+        assert!(!body.is_empty());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn generate_keys() {
+        let tempdir = tempdir().unwrap();
+        build_server(&tempdir).await;
+
+        let client = reqwest::Client::new();
+
+        // get generate keys
+        let response = client
+            .get("http://localhost:7777/generate-keys")
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: String = response.json().await.unwrap();
+        assert!(!body.is_empty());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn subject() {
+        let tempdir = tempdir().unwrap();
+        build_server(&tempdir).await;
+
+        let json = json!({
+          "request": {
+            "Create": {
+              "governance_id": "",
+              "schema_id": "governance",
+              "namespace": "",
+              "name": "EasyTutorial"
+            }
+          }
+        });
+
+        let client = reqwest::Client::new();
+
+        // post event requests
+        let response = client
+            .post("http://localhost:7777/event-requests")
+            .json(&json)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // get subjects
+        let response = client
+            .get("http://localhost:7777/subjects")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<NodeSubjectData> = response.json().await.unwrap();
+        assert!(!body.is_empty());
+        let subject_id = body[0].subject_id.clone();
+
+        // get subjects subject_id
+        let response = client
+            .get(format!("http://localhost:7777/subjects/{}", subject_id))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: NodeSubjectData = response.json().await.unwrap();
+        assert_eq!(body.subject_id, subject_id);
+
+        // get subjects subject_id events
+        let response = client
+            .get(format!(
+                "http://localhost:7777/subjects/{}/events",
+                subject_id
+            ))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<NodeSigned<EventContentResponse>> = response.json().await.unwrap();
+        assert!(!body.is_empty());
+        let patch = body[0].content.patch.clone();
+
+        // get subjects subject_id events sn
+        let response = client
+            .get(format!(
+                "http://localhost:7777/subjects/{}/events/0",
+                subject_id
+            ))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: NodeSigned<EventContentResponse> = response.json().await.unwrap();
+        assert_eq!(patch, body.content.patch);
+
+        // get subjects subject_id validation proof
+        let response = client
+            .get(format!(
+                "http://localhost:7777/subjects/{}/validation",
+                subject_id
+            ))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: NodeProof = response.json().await.unwrap();
+        assert_eq!(subject_id, body.proof.subject_id);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn approval_requests() {
+        /*
+                .route("/approval-requests", get(get_approvals))
+        .route("/approval-requests/:id", get(get_approval_id))
+        .route("/approval-requests/:id", patch(approval_request))
+         */
+
+        let tempdir = tempdir().unwrap();
+        build_server(&tempdir).await;
+
+        let json = json!({
+          "request": {
+            "Create": {
+              "governance_id": "",
+              "schema_id": "governance",
+              "namespace": "",
+              "name": "EasyTutorial"
+            }
+          }
+        });
+
+        let client = reqwest::Client::new();
+
+        // post event requests
+        let response = client
+            .post("http://localhost:7777/event-requests")
+            .json(&json)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: EventRequestResponse = response.json().await.unwrap();
+        assert!(!body.request_id.is_empty());
+        let request_id = body.request_id;
+
+        // get event request id state
+        let response = client
+            .get(format!(
+                "http://localhost:7777/event-requests/{}/state",
+                request_id
+            ))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: NodeKoreRequestState = response.json().await.unwrap();
+        let subject_id = body.subject_id.unwrap();
+
+        let json = json!({
+            "request": {
+                "Fact": {
+                    "subject_id": subject_id,
+                    "payload": {
+                        "Patch": {
+                            "data": [
+                                {
+                                    "op": "add",
+                                    "path": "/members/0",
+                                    "value": {
+                                        "id": "EnyisBz0lX9sRvvV0H-BXTrVtARjUa0YDHzaxFHWH-N4",
+                                        "name": "Tutorial1"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        });
+
+        // post event requests
+        let response = client
+            .post("http://localhost:7777/event-requests")
+            .json(&json)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // get approval requests
+        let response = client
+            .get("http://localhost:7777/approval-requests?status=pending")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<NodeApprovalEntity> = response.json().await.unwrap();
+        assert!(!body.is_empty());
+        let id = body[0].id.clone();
+
+        // get approval requests id
+        let response = client
+            .get(format!("http://localhost:7777/approval-requests/{}", id))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: NodeApprovalEntity = response.json().await.unwrap();
+        assert_eq!(id, body.id);
+
+        let json = json!({"state": "RespondedAccepted"});
+
+        // patch approval requests id
+        let response = client
+            .patch(format!("http://localhost:7777/approval-requests/{}", id))
+            .json(&json)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: NodeApprovalEntity = response.json().await.unwrap();
+        assert_eq!(id, body.id);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn allowed_subjects() {
+        let tempdir = tempdir().unwrap();
+        build_server(&tempdir).await;
+
+        let client = reqwest::Client::new();
+
+        // get allowed subjects
+        let response = client
+            .get("http://localhost:7777/allowed-subjects")
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<PreauthorizedSubjectsResponse> = response.json().await.unwrap();
+        assert!(body.is_empty());
+
+        let json = json!({
+          "providers": []
+        });
+
+        // put allowed subjects subject_id
+        let response = client
+            .put("http://localhost:7777/allowed-subjects/Jz6RNP5F7wNoSeCH65MXYuNVInyuhLvjKb5IpRiH_J6M")
+            .json(&json)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: String = response.json().await.unwrap();
+        assert_eq!(body, "Ok");
+
+        // get allowed subjects
+        let response = client
+            .get("http://localhost:7777/allowed-subjects")
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: Vec<PreauthorizedSubjectsResponse> = response.json().await.unwrap();
+        assert!(!body.is_empty());
+        assert_eq!(
+            body[0].subject_id,
+            "Jz6RNP5F7wNoSeCH65MXYuNVInyuhLvjKb5IpRiH_J6M"
+        );
+    }
 }
