@@ -21,10 +21,18 @@ use utoipa_rapidoc::RapiDoc;
 
 /// Send event request
 ///
-/// Allows to send an event request for a subject to the Kore node.
-/// These requests can be of any type of event (done, creation, transfer and end of life).
+/// Allows sending an event request for a subject to the Kore node.
+/// These requests can be of any type of event (fact, creation, transfer, or end of life).
 /// In case of external invocation, the requests can be signed.
-
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Json(request): Json<NodeSignedEventRequest>` - The signed event request in JSON format.
+///
+/// # Returns
+///
+/// * `Result<Json<EventRequestResponse>, Errors>` - The response to the event request wrapped in a JSON object, or an error.
 #[cfg_attr(feature = "doc", utoipa::path(
     post,
     path = "/event-requests",
@@ -32,7 +40,7 @@ use utoipa_rapidoc::RapiDoc;
     operation_id = "Create Event Request",
     request_body = NodeSignedEventRequest,
     responses(
-        (status = 201, description = "Request Created Successfully", body = EventRequestResponse,
+        (status = 200, description = "Request Created Successfully", body = EventRequestResponse,
         example = json!(
             {
                 "request_id": "J8618wGO7hH4wRuEeL0Ob5XNI9Q73BlCNlV8cWBORq78"
@@ -55,7 +63,16 @@ async fn send_event_request(
 
 /// Get event request
 ///
-/// Allows to obtain an event request by its identifier
+/// Allows obtaining an event request by its identifier.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Path(request_id): Path<String>` - The identifier of the event request as a path parameter.
+///
+/// # Returns
+///
+/// * `Result<Json<NodeSignedEventRequest>, Errors>` - The requested event in JSON format or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/event-requests/{request-id}",
@@ -68,29 +85,32 @@ async fn send_event_request(
         (status = 200, description = "Request Data successfully retrieved", body = NodeSignedEventRequest,
         example = json!(
             {
-                "Fact": {
-                    "subject_id": "JoifaSpfenD2bEPeBLvUTWh30brm4tKcvdW8exQnkGoQ",
+                "request": {
+                  "Fact": {
+                    "subject_id": "Jz_XWeQtVjhoKxoeQCBHSnLlK-WGutaddyT5zpwaNAsI",
                     "payload": {
-                        "Patch": {
-                            "data": [
-                                {
-                                    "op": "add",
-                                    "path": "/members/0",
-                                    "value": {
-                                        "id": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                                        "name": "WPO"
-                                    }
-                                }
-                            ]
-                        }
+                      "Patch": {
+                        "data": [
+                          {
+                            "op": "add",
+                            "path": "/members/1",
+                            "value": {
+                              "id": "EyyisBz0lX9sRvvV0H-BXTrVtARjUa0YDHzaxFHWH-N4",
+                              "name": "Tutorial2"
+                            }
+                          }
+                        ]
+                      }
                     }
+                  }
                 },
                 "signature": {
-                    "signer": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                    "timestamp": 1688643580,
-                    "value": "SE4yS1Q1Smhm3Az3r6WNFKAGd2Us69vyUA3j5q_riE6MICh_Ub2fSLxNS3Nn-g_CpppvABq6s_c8dF5kbmUir4Ag"
+                  "signer": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
+                  "timestamp": 171827,
+                  "value": "SEBSFU_WMTWlyOU6hzzZwlNUMJ8cJHD_GDXBU6NPUJfpikjlocv-sGra2aogrufjQdI1IfxAl0uN4jpTKGlRxeBA",
+                  "content_hash": "JbALAEwzWEud0462GY-WB6JPHH1Ow1pCUGtPAjjB5uq8"
                 }
-            }
+              }
         )
     ),
         (status = 400, description = "Bad Request"),
@@ -110,7 +130,16 @@ async fn get_event_request(
 
 /// Get event request state
 ///
-/// Allows to obtain the status of an event request by its identifier.
+/// Allows obtaining the status of an event request by its identifier.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Path(request_id): Path<String>` - The identifier of the event request.
+///
+/// # Returns
+///
+/// * `Result<Json<NodeKoreRequestState>, Errors>` - The status of the event request as a JSON object or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/event-requests/{request-id}/state",
@@ -147,15 +176,24 @@ async fn get_event_request_state(
 
 /// Get approvals
 ///
-/// Allows to obtain the list of requests for approvals received by the node.
+/// Allows obtaining the list of requests for approvals received by the node.
 /// It can also be used, by means of the "status" parameter, to list the requests pending approval.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Query(parameters): Query<NodeGetApprovals>` - The query parameters including the status for filtering.
+///
+/// # Returns
+///
+/// * `Result<Json<Vec<NodeApprovalEntity>>, Errors>` - A list of approval requests in JSON format or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/approval-requests",
     operation_id = "Get all Approvals Request Data",
     tag = "Approvals",
     params(
-        ("status" = Option<String>, Query, description = "Approval's status (possibilities: pending, obsolete, responded)"),
+        ("status" = Option<String>, Query, description = "Approval's status (possibilities: pending, obsolete, responded_accepted,responded_rejected)"),
         ("from" = Option<String>, Query, description = "Id of initial approval"),
         ("quantity" = Option<i64>, Query, description = "Quantity of approvals requested"
     )),
@@ -164,55 +202,59 @@ async fn get_event_request_state(
         example = json!(
             [
                 {
-                    "id": "J5dfpH-ahrqSo-od4jyZkubyO-XWFJSQ9maK73jKI4Ao",
+                    "id": "JOuIZRXB983t9w9lAEdjXRGAf9r9WX14TajGnni_5q5Y",
                     "request": {
-                        "event_request": {
-                            "Fact": {
-                                "subject_id": "JoifaSpfenD2bEPeBLvUTWh30brm4tKcvdW8exQnkGoQ",
-                                "payload": {
-                                    "Patch": {
-                                        "data": [
-                                            {
-                                                "op": "add",
-                                                "path": "/members/0",
-                                                "value": {
-                                                    "id": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                                                    "name": "WPO"
-                                                }
-                                            }
-                                        ]
+                    "event_request": {
+                        "request": {
+                        "Fact": {
+                            "subject_id": "Jz_XWeQtVjhoKxoeQCBHSnLlK-WGutaddyT5zpwaNAsI",
+                            "payload": {
+                            "Patch": {
+                                "data": [
+                                {
+                                    "op": "add",
+                                    "path": "/members/1",
+                                    "value": {
+                                    "id": "EyyisBz0lX9sRvvV0H-BXTrVtARjUa0YDHzaxFHWH-N4",
+                                    "name": "Tutorial2"
                                     }
                                 }
-                            },
-                            "signature": {
-                                "signer": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                                "timestamp": 168864358,
-                                "value": "SE4yS1Q1Smhm3Az3r6WNFKAGd2Us69vyUA3j5q_riE6MICh_Ub2fSLxNS3Nn-g_CpppvABq6s_c8dF5kbmUir4Ag"
+                                ]
                             }
-                        },
-                        "sn": 1,
-                        "gov_version": 0,
-                        "patch": [
-                            {
-                                "op": "add",
-                                "path": "/members/0",
-                                "value": {
-                                    "id": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                                    "name": "WPO"
-                                }
                             }
-                        ],
-                        "state_hash": "JbDVCZxkDkZ5gLCc7Ge5X75pHHf8dA7_s8UynsnzG5o8",
-                        "hash_prev_event": "JLic8SLrT7tJxA9B3aLaaKaIEuV7Wouo2ogHCid6O4g8",
-                        "signature": {
-                            "signer": "E0gaiDcPRVmYLUGbseHmBk2_2H-FAlSgaO6ZMOXhh4Gs",
-                            "timestamp": 168864358,
-                            "value": "SEFyfXR6kE04gGdCtXZN-So6nNJAAe1qwnTkl0UuoFpCEEuQhwkZND77o1Y9OVuVus8mgGtyAdTi-A7_0MkDKgBw"
                         }
+                        },
+                        "signature": {
+                        "signer": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
+                        "timestamp": 1718270,
+                        "value": "SEBSFU_WMTWlyOU6hzzZwlNUMJ8cJHD_GDXBU6NPUJfpikjlocv-sGra2aogrufjQdI1IfxAl0uN4jpTKGlRxeBA",
+                        "content_hash": "JbALAEwzWEud0462GY-WB6JPHH1Ow1pCUGtPAjjB5uq8"
+                        }
+                    },
+                    "sn": 2,
+                    "gov_version": 1,
+                    "patch": [
+                        {
+                        "op": "add",
+                        "path": "/members/1",
+                        "value": {
+                            "id": "EyyisBz0lX9sRvvV0H-BXTrVtARjUa0YDHzaxFHWH-N4",
+                            "name": "Tutorial2"
+                        }
+                        }
+                    ],
+                    "state_hash": "JjeSDJcWmnedQnledSlGv46ZVa3GnhLz7jE_aVFXz_hQ",
+                    "hash_prev_event": "JRO73PuZwEzXPne5mv4Oe4qDj4elhsU0b6AlHKs7-cTs",
+                    "signature": {
+                        "signer": "E2MJmrdcSC827EPFFHf_J4lGgcLcrwyEmPCyAbqTlc-w",
+                        "timestamp": 1718270,
+                        "value": "SE9X0_Ytp2QQwQxn66JqYoyrrNmA7-U2gl5-mhWnc1XDDAcT4W_iyx7y0CSyQ3nCRfgn1pf7rFF6a1yA77Sf6aBA",
+                        "content_hash": "JcMfxnVhkr86gIh2_ZQwIEQvcavw9wcVfhiOVY1CYzMY"
+                    }
                     },
                     "reponse": null,
                     "state": "Pending"
-                }
+                },
             ]
         )),
         (status = 400, description = "Bad Request"),
@@ -231,7 +273,16 @@ async fn get_approvals(
 
 /// Get approval by ID
 ///
-/// Allows you to obtain a request for approval by its identifier.
+/// Allows obtaining a request for approval by its identifier.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Path(id): Path<String>` - The identifier of the approval request.
+///
+/// # Returns
+///
+/// * `Result<Json<NodeApprovalEntity>, Errors>` - The approval request in JSON format or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/approval-requests/{id}",
@@ -244,55 +295,59 @@ async fn get_approvals(
         (status = 200, description = "Approval Data successfully retrieved", body = NodeApprovalEntity,
         example = json!(
             {
-                "id": "J5dfpH-ahrqSo-od4jyZkubyO-XWFJSQ9maK73jKI4Ao",
+                "id": "JOuIZRXB983t9w9lAEdjXRGAf9r9WX14TajGnni_5q5Y",
                 "request": {
-                    "event_request": {
-                        "Fact": {
-                            "subject_id": "JoifaSpfenD2bEPeBLvUTWh30brm4tKcvdW8exQnkGoQ",
-                            "payload": {
-                                "Patch": {
-                                    "data": [
-                                        {
-                                            "op": "add",
-                                            "path": "/members/0",
-                                            "value": {
-                                                "id": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                                                "name": "WPO"
-                                            }
-                                        }
-                                    ]
+                  "event_request": {
+                    "request": {
+                      "Fact": {
+                        "subject_id": "Jz_XWeQtVjhoKxoeQCBHSnLlK-WGutaddyT5zpwaNAsI",
+                        "payload": {
+                          "Patch": {
+                            "data": [
+                              {
+                                "op": "add",
+                                "path": "/members/1",
+                                "value": {
+                                  "id": "EyyisBz0lX9sRvvV0H-BXTrVtARjUa0YDHzaxFHWH-N4",
+                                  "name": "Tutorial2"
                                 }
-                            }
-                        },
-                        "signature": {
-                            "signer": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                            "timestamp": 1688643580,
-                            "value": "SE4yS1Q1Smhm3Az3r6WNFKAGd2Us69vyUA3j5q_riE6MICh_Ub2fSLxNS3Nn-g_CpppvABq6s_c8dF5kbmUir4Ag"
+                              }
+                            ]
+                          }
                         }
+                      }
                     },
-                    "sn": 1,
-                    "gov_version": 0,
-                    "patch": [
-                        {
-                            "op": "add",
-                            "path": "/members/0",
-                            "value": {
-                                "id": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                                "name": "WPO"
-                            }
-                        }
-                    ],
-                    "state_hash": "JbDVCZxkDkZ5gLCc7Ge5X75pHHf8dA7_s8UynsnzG5o8",
-                    "hash_prev_event": "JLic8SLrT7tJxA9B3aLaaKaIEuV7Wouo2ogHCid6O4g8",
                     "signature": {
-                        "signer": "E0gaiDcPRVmYLUGbseHmBk2_2H-FAlSgaO6ZMOXhh4Gs",
-                        "timestamp": 1688643580,
-                        "value": "SEFyfXR6kE04gGdCtXZN-So6nNJAAe1qwnTkl0UuoFpCEEuQhwkZND77o1Y9OVuVus8mgGtyAdTi-A7_0MkDKgBw"
+                      "signer": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
+                      "timestamp": 1718270,
+                      "value": "SEBSFU_WMTWlyOU6hzzZwlNUMJ8cJHD_GDXBU6NPUJfpikjlocv-sGra2aogrufjQdI1IfxAl0uN4jpTKGlRxeBA",
+                      "content_hash": "JbALAEwzWEud0462GY-WB6JPHH1Ow1pCUGtPAjjB5uq8"
                     }
+                  },
+                  "sn": 2,
+                  "gov_version": 1,
+                  "patch": [
+                    {
+                      "op": "add",
+                      "path": "/members/1",
+                      "value": {
+                        "id": "EyyisBz0lX9sRvvV0H-BXTrVtARjUa0YDHzaxFHWH-N4",
+                        "name": "Tutorial2"
+                      }
+                    }
+                  ],
+                  "state_hash": "JjeSDJcWmnedQnledSlGv46ZVa3GnhLz7jE_aVFXz_hQ",
+                  "hash_prev_event": "JRO73PuZwEzXPne5mv4Oe4qDj4elhsU0b6AlHKs7-cTs",
+                  "signature": {
+                    "signer": "E2MJmrdcSC827EPFFHf_J4lGgcLcrwyEmPCyAbqTlc-w",
+                    "timestamp": 1718270,
+                    "value": "SE9X0_Ytp2QQwQxn66JqYoyrrNmA7-U2gl5-mhWnc1XDDAcT4W_iyx7y0CSyQ3nCRfgn1pf7rFF6a1yA77Sf6aBA",
+                    "content_hash": "JcMfxnVhkr86gIh2_ZQwIEQvcavw9wcVfhiOVY1CYzMY"
+                  }
                 },
                 "reponse": null,
                 "state": "Pending"
-            }
+              }
         )),
         (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
@@ -311,7 +366,17 @@ async fn get_approval_id(
 
 /// Emit approval for request
 ///
-/// Allows you to issue an affirmative or negative approval for a previously received request.
+/// Allows issuing an affirmative or negative approval for a previously received request.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Path(id): Path<String>` - The identifier of the approval request.
+/// * `Json(vote): Json<PatchVote>` - The vote (approval or rejection) in JSON format.
+///
+/// # Returns
+///
+/// * `Result<Json<NodeApprovalEntity>, Errors>` - The result of the approval as a JSON object or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     patch,
     path = "/approval-requests/{id}",
@@ -319,74 +384,77 @@ async fn get_approval_id(
     tag = "Approvals",
     request_body(content = PatchVote, content_type = "application/json", description = "Vote of the user for an existing request",
     example = json!(
-        {
-            "state": "RespondedAccepted"
-        }
+        {"state": "RespondedAccepted"}
     )),
     params(
         ("id" = String, Path, description = "Approval's unique id"),
     ),
     responses(
-        (status = 204, description = "Request successfully voted", body = NodeApprovalEntity,
+        (status = 200, description = "Request successfully voted", body = NodeApprovalEntity,
         example = json!(
             {
-                "id": "J5dfpH-ahrqSo-od4jyZkubyO-XWFJSQ9maK73jKI4Ao",
+                "id": "JSdXPN_MY0Oxue-J3pB4j47-bb296a-KRpZL9o5u4dNo",
                 "request": {
-                    "event_request": {
-                        "Fact": {
-                            "subject_id": "JoifaSpfenD2bEPeBLvUTWh30brm4tKcvdW8exQnkGoQ",
-                            "payload": {
-                                "Patch": {
-                                    "data": [
-                                        {
-                                            "op": "add",
-                                            "path": "/members/0",
-                                            "value": {
-                                                "id": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                                                "name": "WPO"
-                                            }
-                                        }
-                                    ]
+                  "event_request": {
+                    "request": {
+                      "Fact": {
+                        "subject_id": "Jz_XWeQtVjhoKxoeQCBHSnLlK-WGutaddyT5zpwaNAsI",
+                        "payload": {
+                          "Patch": {
+                            "data": [
+                              {
+                                "op": "add",
+                                "path": "/members/0",
+                                "value": {
+                                  "id": "EnyisBz0lX9sRvvV0H-BXTrVtARjUa0YDHzaxFHWH-N4",
+                                  "name": "Tutorial1"
                                 }
-                            }
-                        },
-                        "signature": {
-                            "signer": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                            "timestamp": 1688643580,
-                            "value": "SE4yS1Q1Smhm3Az3r6WNFKAGd2Us69vyUA3j5q_riE6MICh_Ub2fSLxNS3Nn-g_CpppvABq6s_c8dF5kbmUir4Ag"
+                              }
+                            ]
+                          }
                         }
+                      }
                     },
-                    "sn": 1,
-                    "gov_version": 0,
-                    "patch": [
-                        {
-                            "op": "add",
-                            "path": "/members/0",
-                            "value": {
-                                "id": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                                "name": "WPO"
-                            }
-                        }
-                    ],
-                    "state_hash": "JbDVCZxkDkZ5gLCc7Ge5X75pHHf8dA7_s8UynsnzG5o8",
-                    "hash_prev_event": "JLic8SLrT7tJxA9B3aLaaKaIEuV7Wouo2ogHCid6O4g8",
                     "signature": {
-                        "signer": "E0gaiDcPRVmYLUGbseHmBk2_2H-FAlSgaO6ZMOXhh4Gs",
-                        "timestamp": 1688643580,
-                        "value": "SEFyfXR6kE04gGdCtXZN-So6nNJAAe1qwnTkl0UuoFpCEEuQhwkZND77o1Y9OVuVus8mgGtyAdTi-A7_0MkDKgBw"
+                      "signer": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
+                      "timestamp": 17182700,
+                      "value": "SEXiXQa7fwShQO7nN3s6o0jH-R5JZ_UGeLU1mhbYzUuF4ujByWVTxorbkonEkAEa3nf3ay-vsRJzoHlbrcxnwCDA",
+                      "content_hash": "JNKGHoEQ8MV9nqmp_xRDfIMCH2-2B2V-dbNObTmdvJjw"
                     }
+                  },
+                  "sn": 1,
+                  "gov_version": 0,
+                  "patch": [
+                    {
+                      "op": "add",
+                      "path": "/members/0",
+                      "value": {
+                        "id": "EnyisBz0lX9sRvvV0H-BXTrVtARjUa0YDHzaxFHWH-N4",
+                        "name": "Tutorial1"
+                      }
+                    }
+                  ],
+                  "state_hash": "J9ZorCKUeboco5eBZeW_NYssO3ZYLu2Ano_tThl8_Fss",
+                  "hash_prev_event": "JItOA_80oGJGbKuxd37Rhiv4GtojfK67v-a39RNlQoIg",
+                  "signature": {
+                    "signer": "E2MJmrdcSC827EPFFHf_J4lGgcLcrwyEmPCyAbqTlc-w",
+                    "timestamp": 17182700,
+                    "value": "SExa-v-XyA6skhRMH4dxy7a0Sraiw04aMOAvuo5TpMf8YGs-6j6bEy_KPV5Auc4LF35q5nqmy3FVTYKmiHSx4hCw",
+                    "content_hash": "JRQTYPHiKfHsL-IVYu1I0PstSdt86C6V-_3MnSmfDQGk"
+                  }
                 },
                 "reponse": {
-                    "appr_req_hash": "J5dfpH-ahrqSo-od4jyZkubyO-XWFJSQ9maK73jKI4Ao",
-                    "approved": true,
-                    "signature": {
-                        "signer": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                        "timestamp": 168864361,
-                        "value": "SERUEr362pHPIcORhUnYPxnW1A_jW675_yphYIQIKaO6wytdh7xwwNTXHW6Q1fs9F6ag8VpTy2DM_5ppRT7irFDg"
-                    }
+                  "appr_req_hash": "JSdXPN_MY0Oxue-J3pB4j47-bb296a-KRpZL9o5u4dNo",
+                  "approved": true,
+                  "signature": {
+                    "signer": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
+                    "timestamp": 17182700,
+                    "value": "SEj2jBPWPvKWuT3fYAA9VdMObJnODo-lmL5t3y0Kh6jepdrB9BA4D_G5E54GOxcGdERGVAdYa-olieFd96HWEiCA",
+                    "content_hash": "JOt8sRYMnz6vhDA_dDs8gvv8J0mqQt8MlQO-5Ktt-ENE"
+                  }
                 },
-                "state": "Responded"
-            }
+                "state": "RespondedAccepted"
+              }
         )),
         (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
@@ -407,7 +475,16 @@ async fn approval_request(
 
 /// Get authorized subjects
 ///
-/// Allows to obtain the list of subjects that have been pre-authorized by the node, as well as the identifiers of the nodes from which to obtain them.
+/// Allows obtaining the list of subjects that have been pre-authorized by the node, as well as the identifiers of the nodes from which to obtain them.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Query(parameters): Query<PaginatorFromString>` - The pagination parameters for the request.
+///
+/// # Returns
+///
+/// * `Result<Json<Vec<PreauthorizedSubjectsResponse>>, Errors>` - A list of pre-authorized subjects in JSON format or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/allowed-subjects",
@@ -447,6 +524,16 @@ async fn get_all_allowed_subjects_and_providers(
 /// Set subject as preauthorized
 ///
 /// Allows a subject to be established as pre-qualified. It can also be used to specify from which nodes in the network the resource should be obtained.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Path(subject_id): Path<String>` - The identifier of the subject.
+/// * `Json(authorize_subject): Json<AuthorizeSubject>` - The authorization details in JSON format.
+///
+/// # Returns
+///
+/// * `Result<Json<String>, Errors>` - The result of the pre-authorization as a JSON string or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     put,
     path = "/allowed-subjects/{subject-id}",
@@ -482,9 +569,19 @@ async fn add_preauthorize_subject(
         Err(e) => Err(Errors::Kore(e.to_string())),
     }
 }
+
 /// Generate keys
 ///
-/// Generate keys to create events
+/// Generate keys to create events.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Query(parameters): Query<NodeKeys>` - The query parameters for the request.
+///
+/// # Returns
+///
+/// * `Result<Json<String>, Errors>` - The generated keys as a JSON string or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/generate-keys",
@@ -511,10 +608,20 @@ async fn register_keys(
         Err(e) => Err(Errors::Kore(e.to_string())),
     }
 }
+
 /// Get subjects
 ///
-/// Allows to obtain, with pagination, the list of subjects known by the node.
-/// It can also be used to obtain exclusively the governances and all the subjects belonging to a specific one.
+/// Allows obtaining the list of subjects known by the node with pagination.
+/// It can also be used to obtain only the governances and all subjects belonging to a specific governance.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Query(parameters): Query<NodeSubjects>` - The query parameters for the request.
+///
+/// # Returns
+///
+/// * `Result<Json<Vec<NodeSubjectData>>, Errors>` - A list of subjects in JSON format or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/subjects",
@@ -531,33 +638,42 @@ async fn register_keys(
         example = json!(
             [
                 {
-                    "subject_id": "JoifaSpfenD2bEPeBLvUTWh30brm4tKcvdW8exQnkGoQ",
+                    "subject_id": "JEwuT__FAzdnXYY2Sg5BIZeCjjNnVFIuzHzGRtauykY8",
                     "governance_id": "",
                     "sn": 0,
-                    "public_key": "E0gaiDcPRVmYLUGbseHmBk2_2H-FAlSgaO6ZMOXhh4Gs",
+                    "public_key": "EJ0irrPzgmZzawS6nYAoNOfjYsH9cjIDJPeRO4Hc5vmY",
                     "namespace": "",
-                    "name": "Wine_Producers_Organization",
+                    "name": "tutorial",
                     "schema_id": "governance",
-                    "owner": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                    "creator": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
+                    "owner": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
+                    "creator": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
                     "properties": {
-                        "members": [],
-                        "policies": [
-                            {
-                                "approve": {
-                                    "quorum": "MAJORITY"
-                                },
-                                "evaluate": {
-                                    "quorum": "MAJORITY"
-                                },
-                                "id": "governance",
-                                "validate": {
-                                    "quorum": "MAJORITY"
-                                }
-                            }
-                        ],
-                        "roles": [],
-                        "schemas": []
+                    "members": [],
+                    "policies": [
+                        {
+                        "approve": {
+                            "quorum": "MAJORITY"
+                        },
+                        "evaluate": {
+                            "quorum": "MAJORITY"
+                        },
+                        "id": "governance",
+                        "validate": {
+                            "quorum": "MAJORITY"
+                        }
+                        }
+                    ],
+                    "roles": [
+                        {
+                        "namespace": "",
+                        "role": "WITNESS",
+                        "schema": {
+                            "ID": "governance"
+                        },
+                        "who": "MEMBERS"
+                        }
+                    ],
+                    "schemas": []
                     },
                     "active": true
                 }
@@ -578,7 +694,17 @@ async fn get_subjects(
     }
 }
 /// Get subject by subject-id
-/// Allows to obtain a specific subject by means of its identifier
+///
+/// Allows obtaining a specific subject by its identifier.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Path(subject_id): Path<String>` - The identifier of the subject.
+///
+/// # Returns
+///
+/// * `Result<Json<NodeSubjectData>, Errors>` - The subject data in JSON format or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/subjects/{subject-id}",
@@ -591,36 +717,45 @@ async fn get_subjects(
         (status = 200, description = "Subject Data successfully retrieved", body = NodeSubjectData,
         example = json!(
             {
-                "subject_id": "JoifaSpfenD2bEPeBLvUTWh30brm4tKcvdW8exQnkGoQ",
+                "subject_id": "JEwuT__FAzdnXYY2Sg5BIZeCjjNnVFIuzHzGRtauykY8",
                 "governance_id": "",
                 "sn": 0,
-                "public_key": "E0gaiDcPRVmYLUGbseHmBk2_2H-FAlSgaO6ZMOXhh4Gs",
+                "public_key": "EJ0irrPzgmZzawS6nYAoNOfjYsH9cjIDJPeRO4Hc5vmY",
                 "namespace": "",
-                "name": "Wine_Producers_Organization",
+                "name": "tutorial",
                 "schema_id": "governance",
-                "owner": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                "creator": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
+                "owner": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
+                "creator": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
                 "properties": {
-                    "members": [],
-                    "policies": [
-                        {
-                            "approve": {
-                                "quorum": "MAJORITY"
-                            },
-                            "evaluate": {
-                                "quorum": "MAJORITY"
-                            },
-                            "id": "governance",
-                            "validate": {
-                                "quorum": "MAJORITY"
-                            }
-                        }
-                    ],
-                    "roles": [],
-                    "schemas": []
+                  "members": [],
+                  "policies": [
+                    {
+                      "approve": {
+                        "quorum": "MAJORITY"
+                      },
+                      "evaluate": {
+                        "quorum": "MAJORITY"
+                      },
+                      "id": "governance",
+                      "validate": {
+                        "quorum": "MAJORITY"
+                      }
+                    }
+                  ],
+                  "roles": [
+                    {
+                      "namespace": "",
+                      "role": "WITNESS",
+                      "schema": {
+                        "ID": "governance"
+                      },
+                      "who": "MEMBERS"
+                    }
+                  ],
+                  "schemas": []
                 },
                 "active": true
-            }
+              }
         )),
         (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
@@ -639,7 +774,16 @@ async fn get_subject(
 
 /// Get validation proof
 ///
-/// Allows to obtain the validation test of the last event for a specified subject.
+/// Allows obtaining the validation test of the last event for a specified subject.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Path(subject_id): Path<String>` - The identifier of the subject.
+///
+/// # Returns
+///
+/// * `Result<Json<NodeProof>, Errors>` - The validation proof in JSON format or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/subjects/{subject-id}/validation",
@@ -653,26 +797,27 @@ async fn get_subject(
         example = json!(
             {
                 "proof": {
-                    "subject_id": "JoifaSpfenD2bEPeBLvUTWh30brm4tKcvdW8exQnkGoQ",
-                    "schema_id": "governance",
-                    "namespace": "",
-                    "name": "Wine_Producers_Organization",
-                    "subject_public_key": "E0gaiDcPRVmYLUGbseHmBk2_2H-FAlSgaO6ZMOXhh4Gs",
-                    "governance_id": "",
-                    "genesis_governance_version": 0,
-                    "sn": 0,
-                    "prev_event_hash": "",
-                    "event_hash": "JLic8SLrT7tJxA9B3aLaaKaIEuV7Wouo2ogHCid6O4g8",
-                    "governance_version": 0
+                  "subject_id": "JEwuT__FAzdnXYY2Sg5BIZeCjjNnVFIuzHzGRtauykY8",
+                  "schema_id": "governance",
+                  "namespace": "",
+                  "name": "tutorial",
+                  "subject_public_key": "EJ0irrPzgmZzawS6nYAoNOfjYsH9cjIDJPeRO4Hc5vmY",
+                  "governance_id": "",
+                  "genesis_governance_version": 0,
+                  "sn": 0,
+                  "prev_event_hash": "",
+                  "event_hash": "J40VKacq_EfrwIFZJTOEWjSm3RajiuG7T3l8YC5YCemM",
+                  "governance_version": 0
                 },
                 "signatures": [
-                    {
-                        "signer": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                        "timestamp": 1688643031,
-                        "value": "SEF3qN1uKIgNfnK6YlgU7rlCvDCNHhl_tdcRBvQRyGShR8oOOw5tVk8_OUNlyaJV_HsrISeX8jAf4L3diodRZ_Dg"
-                    }
+                  {
+                    "signer": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
+                    "timestamp": 17182688,
+                    "value": "SEMaLSVuDTpuPZ6ImO99R2jNKpPG4IonEhafmg9rnj3xIUOWauOZK-ZZlnjaYOPQwsKmJ8ff3n_EPJPs-l2S_5DA",
+                    "content_hash": "JgGy23Fso8KgrLKG8BImiWeD9AHZYWL4kjIRkbNZ7fqU"
+                  }
                 ]
-            }
+              }
         )),
         (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
@@ -688,8 +833,20 @@ async fn get_validation_proof(
         Err(e) => Err(Errors::Kore(e.to_string())),
     }
 }
-/// Get subject by ID
-/// Allows to obtain a specific subject by means of its identifier
+
+/// Get events of a subject
+///
+/// Allows obtaining specific events of a subject by its identifier.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Path(subject_id): Path<String>` - The identifier of the subject.
+/// * `Query(parameters): Query<PaginatorFromNumber>` - The pagination parameters for the request.
+///
+/// # Returns
+///
+/// * `Result<Json<Vec<NodeSigned<EventContentResponse>>>, Errors>` - A list of events in JSON format or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/subjects/{subject-id}/events",
@@ -699,39 +856,87 @@ async fn get_validation_proof(
         ("subject-id" = String, Path, description = "Subject's unique id"),
     ),
     responses(
-        (status = 200, description = "Subject Data successfully retrieved", body = NodeSignedEventContentResponse,
+        (status = 200, description = "Subject Data successfully retrieved", body = [NodeSignedEventContentResponse],
         example = json!(
-            {
-                "subject_id": "JoifaSpfenD2bEPeBLvUTWh30brm4tKcvdW8exQnkGoQ",
-                "governance_id": "",
-                "sn": 0,
-                "public_key": "E0gaiDcPRVmYLUGbseHmBk2_2H-FAlSgaO6ZMOXhh4Gs",
-                "namespace": "",
-                "name": "Wine_Producers_Organization",
-                "schema_id": "governance",
-                "owner": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                "creator": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                "properties": {
-                    "members": [],
-                    "policies": [
-                        {
-                            "approve": {
-                                "quorum": "MAJORITY"
-                            },
-                            "evaluate": {
-                                "quorum": "MAJORITY"
-                            },
-                            "id": "governance",
-                            "validate": {
-                                "quorum": "MAJORITY"
-                            }
+                    [
+                    {
+                        "subject_id": "JEwuT__FAzdnXYY2Sg5BIZeCjjNnVFIuzHzGRtauykY8",
+                        "event_request": {
+                        "Create": {
+                            "governance_id": "",
+                            "schema_id": "governance",
+                            "namespace": "",
+                            "name": "tutorial",
+                            "public_key": "EJ0irrPzgmZzawS6nYAoNOfjYsH9cjIDJPeRO4Hc5vmY"
+                        },
+                        "signature": {
+                            "signer": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
+                            "timestamp": 1718268,
+                            "value": "SEOEf5NFEFX_Ylf2dw0MG7y5Ckem4uSvr7YN7sdJWRF2s-OeNMmtPcP0d3QmYNqVlTUPixNrv5woQDuT19UWqlDg",
+                            "content_hash": "JWLeRGGAJM_1DcpNVc888lMlgZCgqKplV8CZ-tBLH2p8"
                         }
-                    ],
-                    "roles": [],
-                    "schemas": []
-                },
-                "active": true
-            }
+                        },
+                        "gov_version": 0,
+                        "sn": 0,
+                        "patch": [
+                        {
+                            "op": "add",
+                            "path": "/members",
+                            "value": []
+                        },
+                        {
+                            "op": "add",
+                            "path": "/policies",
+                            "value": [
+                            {
+                                "approve": {
+                                "quorum": "MAJORITY"
+                                },
+                                "evaluate": {
+                                "quorum": "MAJORITY"
+                                },
+                                "id": "governance",
+                                "validate": {
+                                "quorum": "MAJORITY"
+                                }
+                            }
+                            ]
+                        },
+                        {
+                            "op": "add",
+                            "path": "/roles",
+                            "value": [
+                            {
+                                "namespace": "",
+                                "role": "WITNESS",
+                                "schema": {
+                                "ID": "governance"
+                                },
+                                "who": "MEMBERS"
+                            }
+                            ]
+                        },
+                        {
+                            "op": "add",
+                            "path": "/schemas",
+                            "value": []
+                        }
+                        ],
+                        "state_hash": "JZrjWdX_tP5Q_9SDcW5bS9RbvN6SuZ62cxvjn3XcolLI",
+                        "eval_success": true,
+                        "appr_required": false,
+                        "approved": true,
+                        "hash_prev_event": "",
+                        "evaluators": [],
+                        "approvers": [],
+                        "signature": {
+                        "signer": "EJ0irrPzgmZzawS6nYAoNOfjYsH9cjIDJPeRO4Hc5vmY",
+                        "timestamp": 1718268,
+                        "value": "SER7GL9A9nSAMkmtySPgQpU2CLR2lHAJdtxmIe2wOc0ohWsN9BtIv7qXjgcWwi-fF5VXVqnjUHj0fy3CKKavtGCw",
+                        "content_hash": "JARzRLhapGTQxEWHc9i9taSIXa0d6zuDNe-M-3MFVTSc"
+                        }
+                    }
+                    ]
         )),
         (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
@@ -751,9 +956,19 @@ async fn get_events_of_subject(
         Err(e) => Err(Errors::Kore(e.to_string())),
     }
 }
+
 /// Get an event from a subject
 ///
-/// Allows to obtain a specific event from a subject
+/// Allows obtaining a specific event from a subject.
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+/// * `Path((subject_id, sn)): Path<(String, u64)>` - The subject identifier and the sequence number of the event.
+///
+/// # Returns
+///
+/// * `Result<Json<NodeSigned<EventContentResponse>>, Errors>` - The requested event in JSON format or an error if the request fails.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/subjects/{subject-id}/events/{sn}",
@@ -767,59 +982,69 @@ async fn get_events_of_subject(
         (status = 200, description = "Subjects Data successfully retrieved", body = NodeSignedEventContentResponse,
         example = json!(
             {
-                "subject_id": "JoifaSpfenD2bEPeBLvUTWh30brm4tKcvdW8exQnkGoQ",
+                "subject_id": "JEwuT__FAzdnXYY2Sg5BIZeCjjNnVFIuzHzGRtauykY8",
                 "event_request": {
-                    "Create": {
-                        "governance_id": "",
-                        "schema_id": "governance",
-                        "namespace": "",
-                        "name": "Wine_Producers_Organization",
-                        "public_key": "E0gaiDcPRVmYLUGbseHmBk2_2H-FAlSgaO6ZMOXhh4Gs"
-                    },
-                    "signature": {
-                        "signer": "EbwR0yYrCYpTzlN5i5GX_MtAbKRw5y2euv3TqiTgwggs",
-                        "timestamp": 168864303,
-                        "value": "SE-tHjb3eWcMvVIYuSBPn0EW4Q5mQs2uswS5HLl0GB0iYVEc5jcOWD78ZHRL8VlO0mtxv9KWt2EI9R9Id2Z5o8CA"
-                    }
+                  "Create": {
+                    "governance_id": "",
+                    "schema_id": "governance",
+                    "namespace": "",
+                    "name": "tutorial",
+                    "public_key": "EJ0irrPzgmZzawS6nYAoNOfjYsH9cjIDJPeRO4Hc5vmY"
+                  },
+                  "signature": {
+                    "signer": "EwkWURnRVk-lUEjF0cowczxYkz8DpbhLfo3UMSZE00LE",
+                    "timestamp": 171826883,
+                    "value": "SEOEf5NFEFX_Ylf2dw0MG7y5Ckem4uSvr7YN7sdJWRF2s-OeNMmtPcP0d3QmYNqVlTUPixNrv5woQDuT19UWqlDg",
+                    "content_hash": "JWLeRGGAJM_1DcpNVc888lMlgZCgqKplV8CZ-tBLH2p8"
+                  }
                 },
-                "sn": 0,
                 "gov_version": 0,
+                "sn": 0,
                 "patch": [
-                    {
-                        "op": "add",
-                        "path": "/members",
-                        "value": []
-                    },
-                    {
-                        "op": "add",
-                        "path": "/policies",
-                        "value": [
-                            {
-                                "approve": {
-                                    "quorum": "MAJORITY"
-                                },
-                                "evaluate": {
-                                    "quorum": "MAJORITY"
-                                },
-                                "id": "governance",
-                                "validate": {
-                                    "quorum": "MAJORITY"
-                                }
-                            }
-                        ]
-                    },
-                    {
-                        "op": "add",
-                        "path": "/roles",
-                        "value": []
-                    },
-                    {
-                        "op": "add",
-                        "path": "/schemas",
-                        "value": []
-                    }
+                  {
+                    "op": "add",
+                    "path": "/members",
+                    "value": []
+                  },
+                  {
+                    "op": "add",
+                    "path": "/policies",
+                    "value": [
+                      {
+                        "approve": {
+                          "quorum": "MAJORITY"
+                        },
+                        "evaluate": {
+                          "quorum": "MAJORITY"
+                        },
+                        "id": "governance",
+                        "validate": {
+                          "quorum": "MAJORITY"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "op": "add",
+                    "path": "/roles",
+                    "value": [
+                      {
+                        "namespace": "",
+                        "role": "WITNESS",
+                        "schema": {
+                          "ID": "governance"
+                        },
+                        "who": "MEMBERS"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "add",
+                    "path": "/schemas",
+                    "value": []
+                  }
                 ],
-                "state_hash": "JVKr8BAEs1DhpNjMZf4525IYps2Gu6m7ZBmuaNBoM_Qk",
+                "state_hash": "JZrjWdX_tP5Q_9SDcW5bS9RbvN6SuZ62cxvjn3XcolLI",
                 "eval_success": true,
                 "appr_required": false,
                 "approved": true,
@@ -827,11 +1052,12 @@ async fn get_events_of_subject(
                 "evaluators": [],
                 "approvers": [],
                 "signature": {
-                    "signer": "E0gaiDcPRVmYLUGbseHmBk2_2H-FAlSgaO6ZMOXhh4Gs",
-                    "timestamp": 168864303,
-                    "value": "SEnTz4Nw-rX6y00yNF01o__AwyWxyG1s669AetXCfrnxCTSyf67xv8AsnccTOe4fFm-2ZIeRjubdf5FTQHZAd7BQ"
+                  "signer": "EJ0irrPzgmZzawS6nYAoNOfjYsH9cjIDJPeRO4Hc5vmY",
+                  "timestamp": 171826883,
+                  "value": "SER7GL9A9nSAMkmtySPgQpU2CLR2lHAJdtxmIe2wOc0ohWsN9BtIv7qXjgcWwi-fF5VXVqnjUHj0fy3CKKavtGCw",
+                  "content_hash": "JARzRLhapGTQxEWHc9i9taSIXa0d6zuDNe-M-3MFVTSc"
                 }
-            }
+              }
         )),
         (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
@@ -847,9 +1073,18 @@ async fn get_event_of_subject(
         Err(e) => Err(Errors::Kore(e.to_string())),
     }
 }
+
 /// Get Controller-id
 ///
-/// Returns the controller-id(public key of the node).
+/// Returns the controller-id (public key of the node).
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+///
+/// # Returns
+///
+/// * `Json<String>` - The controller-id as a JSON string.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/controller-id",
@@ -869,7 +1104,15 @@ async fn get_controller_id(Extension(kore_api): Extension<Arc<KoreApi>>) -> Json
 
 /// Get Peer-id
 ///
-/// Returns the peer-id(unique identifier of the node in the network).
+/// Returns the peer-id (unique identifier of the node in the network).
+///
+/// # Parameters
+///
+/// * `Extension(kore_api): Extension<Arc<KoreApi>>` - The Kore API extension wrapped in an `Arc`.
+///
+/// # Returns
+///
+/// * `Json<String>` - The peer-id as a JSON string.
 #[cfg_attr(feature = "doc",  utoipa::path(
     get,
     path = "/peer-id",
@@ -934,7 +1177,8 @@ pub fn build_routes(kore_api: KoreApi) -> Router {
         );
     #[cfg(feature = "doc")]
     return Router::new().merge(routes).merge(
-        RapiDoc::with_openapi("/api-docs/openapi.json", ApiDoc::openapi()).path("/rapidoc"),
+        RapiDoc::with_openapi("/api-docs/openapi.json", ApiDoc::openapi()).path("/doc"),
+
     );
     #[cfg(not(feature = "doc"))]
     Router::new().merge(routes)
