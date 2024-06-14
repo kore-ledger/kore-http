@@ -41,9 +41,10 @@ for i in "${!FEATURES_ARRAY[@]}"; do
     # Crear una imagen multi-arquitectura usando manifest
     echo ""
     echo "Creando imagen multi-arquitectura..."
+    docker manifest rm ${DOCKER_USERNAME}/${DOCKER_REPO}:${TAG}
     docker manifest create ${DOCKER_USERNAME}/${DOCKER_REPO}:${TAG} \
-        --amend ${DOCKER_USERNAME}/${DOCKER_REPO}:amd64-${TAG} \
-        --amend ${DOCKER_USERNAME}/${DOCKER_REPO}:arm64-${TAG}
+        ${DOCKER_USERNAME}/${DOCKER_REPO}:amd64-${TAG} \
+        ${DOCKER_USERNAME}/${DOCKER_REPO}:arm64-${TAG}
 
     # Marcar la plataforma para cada arquitectura
     docker manifest annotate ${DOCKER_USERNAME}/${DOCKER_REPO}:${TAG} ${DOCKER_USERNAME}/${DOCKER_REPO}:amd64-${TAG} --os linux --arch amd64
