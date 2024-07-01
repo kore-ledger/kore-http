@@ -1,0 +1,49 @@
+#docker build --platform linux/arm64 --build-arg FEATURES="sqlite prometheus doc" -t prueba:sqlite --target sqlite -f ./docker/Dockerfile.prueba ./.. 
+#docker build --platform linux/arm64 --build-arg FEATURES="leveldb prometheus doc" -t prueba:leveldb --target leveldb -f ./docker/Dockerfile.prueba ./.. 
+
+# Etapa de compilación para ARM64
+FROM rust:1.78-slim-buster AS builder-leveldb
+RUN apt-get update && apt-get install --no-install-recommends -y build-essential cmake \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+RUN rustup target add aarch64-unknown-linux-gnu
+COPY ./kore-http /kore-http
+COPY ./kore-base /kore-base
+COPY ./kore-node /kore-node
+
+# Argumento de construcción para features
+ARG FEATURES=""
+ENV CARGO_FEATURES=$FEATURES
+
+RUN cd /kore-http && cargo build --target aarch64-unknown-linux-gnu --release --no-default-features --features "$CARGO_FEATURES"
+
+
+# Imagen final para ARM64
+FROM rust:1.78-slim-buster AS leveldb
+COPY --from=builder-leveldb /kore-http/target/aarch64-unknown-linux-gnu/release/kore-http /usr/local/bin/kore-http
+RUN rustup target add wasm32-unknown-unknown
+
+CMD ["kore-http"]
+
+
+
+
+# Etapa de compilación para ARM64
+FROM rust:1.78-slim-buster AS builder-sqlite
+RUN rustup target add aarch64-unknown-linux-gnu
+COPY ./kore-http /kore-http
+COPY ./kore-base /kore-base
+COPY ./kore-node /kore-node
+
+# Argumento de construcción para features
+ARG FEATURES=""
+ENV CARGO_FEATURES=$FEATURES
+
+RUN cd /kore-http && cargo build --target aarch64-unknown-linux-gnu --release --no-default-features --features "$CARGO_FEATURES"
+
+# Imagen final para ARM64
+FROM rust:1.78-slim-buster AS sqlite
+COPY --from=builder-sqlite /kore-http/target/aarch64-unknown-linux-gnu/release/kore-http /usr/local/bin/kore-http
+RUN rustup target add wasm32-unknown-unknown
+
+CMD ["kore-http"]

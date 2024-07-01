@@ -3,7 +3,6 @@ mod config;
 mod error;
 mod middleware;
 mod server;
-mod util;
 
 #[cfg(feature = "doc")]
 mod doc;
@@ -30,12 +29,20 @@ use middleware::middlewares::tower_trace;
 use server::build_routes;
 use tokio::signal;
 use tower_http::cors::{Any, CorsLayer};
-use util::logger::build_logger;
+use tracing::debug;
+use tracing_subscriber::EnvFilter;
+const TARGET_WORKER: &str = "HTTP";
 
 #[tokio::main]
 async fn main() {
-    // Logs
-    build_logger();
+    tracing_subscriber::fmt()
+    .with_env_filter(EnvFilter::from_default_env())
+    .try_init().unwrap();
+
+    debug!(
+        TARGET_WORKER,
+        "To the moon!"
+    );
 
     // Command line args.
     let args = Args::parse();
