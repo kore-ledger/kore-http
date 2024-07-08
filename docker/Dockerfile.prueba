@@ -1,5 +1,5 @@
-#docker build --platform linux/arm64 --build-arg FEATURES="sqlite prometheus doc" -t prueba:sqlite --target sqlite -f ./docker/Dockerfile.prueba ./.. 
-#docker build --platform linux/arm64 --build-arg FEATURES="leveldb prometheus doc" -t prueba:leveldb --target leveldb -f ./docker/Dockerfile.prueba ./.. 
+#docker build --platform linux/arm64 --build-arg FEATURES="sqlite prometheus doc" -t koreadmin/kore-http:prueba-sqlite --target sqlite -f ./docker/Dockerfile.prueba ./.. 
+#docker build --platform linux/arm64 --build-arg FEATURES="leveldb prometheus doc" -t koreadmin/kore-http:prueba-leveldb --target leveldb -f ./docker/Dockerfile.prueba ./..
 
 # Etapa de compilación para ARM64
 FROM rust:1.78-slim-buster AS builder-leveldb
@@ -7,9 +7,17 @@ RUN apt-get update && apt-get install --no-install-recommends -y build-essential
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 RUN rustup target add aarch64-unknown-linux-gnu
-COPY ./kore-http /kore-http
-COPY ./kore-base /kore-base
-COPY ./kore-node /kore-node
+COPY ./kore-http/src /kore-http/src
+COPY ./kore-http/Cargo.toml /kore-http/Cargo.toml
+
+COPY ./kore-node/src /kore-node/src
+COPY ./kore-node/Cargo.toml /kore-node/Cargo.toml
+
+COPY ./kore-base/core /kore-base/core
+COPY ./kore-base/identity /kore-base/identity
+COPY ./kore-base/network /kore-base/network
+COPY ./kore-base/protocols /kore-base/protocols
+COPY ./kore-base/Cargo.toml /kore-base/Cargo.toml
 
 # Argumento de construcción para features
 ARG FEATURES=""
@@ -31,9 +39,17 @@ CMD ["kore-http"]
 # Etapa de compilación para ARM64
 FROM rust:1.78-slim-buster AS builder-sqlite
 RUN rustup target add aarch64-unknown-linux-gnu
-COPY ./kore-http /kore-http
-COPY ./kore-base /kore-base
-COPY ./kore-node /kore-node
+COPY ./kore-http/src /kore-http/src
+COPY ./kore-http/Cargo.toml /kore-http/Cargo.toml
+
+COPY ./kore-node/src /kore-node/src
+COPY ./kore-node/Cargo.toml /kore-node/Cargo.toml
+
+COPY ./kore-base/core /kore-base/core
+COPY ./kore-base/identity /kore-base/identity
+COPY ./kore-base/network /kore-base/network
+COPY ./kore-base/protocols /kore-base/protocols
+COPY ./kore-base/Cargo.toml /kore-base/Cargo.toml
 
 # Argumento de construcción para features
 ARG FEATURES=""
