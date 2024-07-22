@@ -22,12 +22,12 @@ utoipa = { version = "4.2.3", features = ["axum_extras"], optional = true}
 utoipa-rapidoc = { version = "4.0.0", features = ["axum"], optional = true}
 
 # Kore
-kore-node = { git = "https://github.com/kore-ledger/kore-node.git", default-features = false, features = [], version = "0.5.14"}
+kore-node = { git = "https://github.com/kore-ledger/kore-node.git", default-features = false, features = [], version = "0.5.16"}
 
 [dev-dependencies]
 serial_test = "3.0"
 tempfile = "3.2"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12.5", features = ["json"] }
 
 [features]
 default = ["doc", "prometheus", "leveldb"]
