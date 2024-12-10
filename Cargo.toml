@@ -1,0 +1,18 @@
+[package]
+name = "kore-http"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+kore-bridge = { path = "../kore/kore-bridge" }
+
+tokio = { version = "1.42.0", features = ["full"] }
+config = { version = "0.14.1", features = ["json", "toml", "yaml"]}
+serde_json = {version = "1.0.133"}
+serde = {version = "1.0.215"}
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+axum = "0.7.5"
+tower = "0.5.1"
+tower-http = {version = "0.6.2", features = ["trace", "metrics", "cors"]}
