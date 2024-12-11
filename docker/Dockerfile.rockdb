@@ -1,0 +1,78 @@
+#docker build --platform linux/arm64 -t koreadmin/kore-http:arm64-rockdb-prometheus --target arm64 -f ./kore-http/docker/Dockerfile.rockdb .
+#docker build --platform linux/amd64 --build-arg FEATURES="rockdb prometheus doc" -t koreadmin/kore-http:amd64-rockdb --target amd64 -f ./docker/Dockerfile.rockdb ./..
+
+# Etapa de compilación para AMD64
+FROM rust:1.78-slim-buster AS builder-amd64
+RUN apt-get update && apt-get install --no-install-recommends -y build-essential cmake pkg-config libssl-dev clang libclang-dev llvm-dev libc6-dev gcc libsqlite3-dev \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+RUN rustup target add x86_64-unknown-linux-gnu
+
+# Argumento de construcción para features
+ARG FEATURES=""
+ENV CARGO_FEATURES=$FEATURES
+
+# Kore http
+COPY ./kore-http/src ./kore-http/src
+COPY ./kore-http/Cargo.toml ./kore-http/Cargo.toml
+# Kore
+COPY ./kore/identity ./kore/identity
+COPY ./kore/kore-base ./kore/kore-base
+COPY ./kore/kore-bridge ./kore/kore-bridge
+COPY ./kore/network ./kore/network
+COPY ./kore/protocols ./kore/protocols
+COPY ./kore/Cargo.toml ./kore/Cargo.toml
+# Rush-rs
+COPY ./rush-rs/actor ./rush-rs/actor
+COPY ./rush-rs/databases ./rush-rs/databases
+COPY ./rush-rs/store ./rush-rs/store
+COPY ./rush-rs/Cargo.toml ./rush-rs/Cargo.toml
+
+WORKDIR /kore-http
+RUN cargo build --target x86_64-unknown-linux-gnu --release
+
+# Etapa de compilación para ARM64
+FROM rust:1.78-slim-buster AS builder-arm64
+RUN apt-get update && apt-get install --no-install-recommends -y build-essential cmake pkg-config libssl-dev clang libclang-dev llvm-dev libc6-dev gcc libsqlite3-dev \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+RUN rustup target add aarch64-unknown-linux-gnu
+
+# Argumento de construcción para features
+ARG FEATURES=""
+ENV CARGO_FEATURES=$FEATURES
+
+# Kore http
+COPY ./kore-http/src ./kore-http/src
+COPY ./kore-http/Cargo.toml ./kore-http/Cargo.toml
+# Kore
+COPY ./kore/identity ./kore/identity
+COPY ./kore/kore-base ./kore/kore-base
+COPY ./kore/kore-bridge ./kore/kore-bridge
+COPY ./kore/network ./kore/network
+COPY ./kore/protocols ./kore/protocols
+COPY ./kore/Cargo.toml ./kore/Cargo.toml
+# Rush-rs
+COPY ./rush-rs/actor ./rush-rs/actor
+COPY ./rush-rs/databases ./rush-rs/databases
+COPY ./rush-rs/store ./rush-rs/store
+COPY ./rush-rs/Cargo.toml ./rush-rs/Cargo.toml
+
+WORKDIR /kore-http
+RUN cargo build --target aarch64-unknown-linux-gnu --release
+
+# Imagen final para AMD64
+FROM rust:1.78-slim-buster AS amd64
+RUN apt-get update && apt-get install --no-install-recommends -y libsqlite3-dev
+COPY --from=builder-amd64 ./kore-http/target/x86_64-unknown-linux-gnu/release/kore-http /usr/local/bin/kore-http
+RUN rustup target add wasm32-unknown-unknown
+
+CMD ["kore-http"]
+
+# Imagen final para ARM64
+FROM rust:1.78-slim-buster AS arm64
+RUN apt-get update && apt-get install --no-install-recommends -y libsqlite3-dev
+COPY --from=builder-arm64 ./kore-http/target/aarch64-unknown-linux-gnu/release/kore-http /usr/local/bin/kore-http
+RUN rustup target add wasm32-unknown-unknown
+
+CMD ["kore-http"]
