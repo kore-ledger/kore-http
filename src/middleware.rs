@@ -1,6 +1,6 @@
-use tower_http::{classify::ServerErrorsFailureClass, trace::TraceLayer};
-use tracing::{debug, info_span, Span, error};
 use std::time::Duration;
+use tower_http::{classify::ServerErrorsFailureClass, trace::TraceLayer};
+use tracing::{debug, error, info_span, Span};
 
 use axum::{
     body::Bytes,

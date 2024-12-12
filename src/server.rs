@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, Query}, routing::{delete, get, patch, post, put}, Extension, Json, Router
+    extract::{Path, Query},
+    routing::{delete, get, patch, post, put},
+    Extension, Json, Router,
 };
 use kore_bridge::{model::BridgeSignedEventRequest, Bridge, GovsData, RegisterData, RequestData};
 use serde::Deserialize;
@@ -33,7 +35,7 @@ async fn send_event_request(
 ) -> Result<Json<RequestData>, Error> {
     match bridge.send_event_request(request).await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))  
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
@@ -43,7 +45,7 @@ async fn get_request_state(
 ) -> Result<Json<String>, Error> {
     match bridge.get_request_state(request_id).await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))  
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
@@ -53,7 +55,7 @@ async fn get_approval(
 ) -> Result<Json<Value>, Error> {
     match bridge.get_approval(subject_id).await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))  
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
@@ -64,7 +66,7 @@ async fn patch_approval(
 ) -> Result<Json<String>, Error> {
     match bridge.patch_approve(subject_id, response).await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
@@ -72,10 +74,10 @@ async fn put_auth(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
     Json(witnesses): Json<Vec<String>>,
-)-> Result<Json<String>, Error> {
+) -> Result<Json<String>, Error> {
     match bridge.put_auth_subject(subject_id, witnesses).await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
@@ -84,7 +86,7 @@ async fn get_all_auth_subjects(
 ) -> Result<Json<Vec<String>>, Error> {
     match bridge.get_all_auth_subjects().await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
@@ -94,7 +96,7 @@ async fn get_witnesses_subject(
 ) -> Result<Json<Vec<String>>, Error> {
     match bridge.get_witnesses_subject(subject_id).await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
@@ -104,7 +106,7 @@ async fn delete_auth_subject(
 ) -> Result<Json<String>, Error> {
     match bridge.delete_auth_subject(subject_id).await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
@@ -114,39 +116,45 @@ async fn update_subject(
 ) -> Result<Json<String>, Error> {
     match bridge.update_subject(subject_id).await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
 async fn get_all_govs(
     Extension(bridge): Extension<Arc<Bridge>>,
-    Query(parameters): Query<GovQuery>
+    Query(parameters): Query<GovQuery>,
 ) -> Result<Json<Vec<GovsData>>, Error> {
     match bridge.get_all_govs(parameters.active).await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
 async fn get_all_subjects(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(governance_id): Path<String>,
-    Query(parameters): Query<SubjectQuery>
+    Query(parameters): Query<SubjectQuery>,
 ) -> Result<Json<Vec<RegisterData>>, Error> {
-    match bridge.get_all_subjs(governance_id, parameters.active, parameters.schema).await {
+    match bridge
+        .get_all_subjs(governance_id, parameters.active, parameters.schema)
+        .await
+    {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
 async fn get_events(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
-    Query(parameters): Query<EventsQuery>
+    Query(parameters): Query<EventsQuery>,
 ) -> Result<Json<Value>, Error> {
-    match bridge.get_events(subject_id, parameters.quantity, parameters.page).await {
+    match bridge
+        .get_events(subject_id, parameters.quantity, parameters.page)
+        .await
+    {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
@@ -156,7 +164,7 @@ async fn get_state(
 ) -> Result<Json<Value>, Error> {
     match bridge.get_subject(subject_id).await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))  
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 
@@ -166,7 +174,7 @@ async fn get_signatures(
 ) -> Result<Json<Value>, Error> {
     match bridge.get_signatures(subject_id).await {
         Ok(response) => Ok(Json(response)),
-        Err(e) => Err(Error::Kore(e.to_string()))  
+        Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
 

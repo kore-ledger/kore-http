@@ -2,22 +2,27 @@ use std::net::SocketAddr;
 
 use axum::http::{header, Method};
 use enviroment::build_address;
+use kore_bridge::{
+    clap::Parser,
+    settings::{build_config, build_file_path, build_password, command::Args},
+    Bridge,
+};
 use middleware::tower_trace;
 use server::build_routes;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::EnvFilter;
-use kore_bridge::{clap::Parser, settings::{build_config, build_file_path, build_password, command::Args}, Bridge};
 
-mod server;
 mod enviroment;
-mod middleware;
 mod error;
+mod middleware;
+mod server;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-    .with_env_filter(EnvFilter::from_default_env())
-    .try_init().unwrap();
+        .with_env_filter(EnvFilter::from_default_env())
+        .try_init()
+        .unwrap();
 
     let args = Args::parse();
 
@@ -57,5 +62,4 @@ async fn main() {
     })
     .await
     .unwrap()
-
 }
