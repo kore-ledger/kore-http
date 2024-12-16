@@ -1,14 +1,17 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, path::PathBuf};
 
-use axum::http::{header, Method};
-use enviroment::build_address;
+use axum::{extract::Host, handler::HandlerWithoutStateExt, http::{header, Method, StatusCode, Uri}, response::Redirect, BoxError};
+use axum_server::{tls_rustls::RustlsConfig, Handle};
+use enviroment:: { build_address_http, build_address_https, build_https_cert, build_https_private_key };
 use kore_bridge::{
     clap::Parser,
     settings::{build_config, build_file_path, build_password, command::Args},
     Bridge,
 };
 use middleware::tower_trace;
+use rustls::crypto::{ring, CryptoProvider};
 use server::build_routes;
+use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::EnvFilter;
 
@@ -16,6 +19,12 @@ mod enviroment;
 mod error;
 mod middleware;
 mod server;
+
+#[derive(Clone)]
+struct Ports {
+    http: String,
+    https: String,
+}
 
 #[tokio::main]
 async fn main() {
@@ -36,30 +45,103 @@ async fn main() {
         file_path = build_file_path();
     }
 
-    let listener = tokio::net::TcpListener::bind(build_address())
+    let https_address = build_address_https();
+
+    let listener_http = tokio::net::TcpListener::bind(build_address_http())
         .await
         .unwrap();
-
-    let config = build_config(args.env_config, &file_path);
-    let bridge = Bridge::build(config, &password, None).await.unwrap();
-    let token = bridge.token().clone();
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::PATCH])
         .allow_headers([header::CONTENT_TYPE])
         .allow_origin(Any);
-    axum::serve(
-        listener,
-        tower_trace(build_routes(bridge))
-            .layer(cors)
-            .into_make_service_with_connect_info::<SocketAddr>(),
-    )
-    .with_graceful_shutdown(async move {
-        tokio::select! {
-            _ = token.cancelled() => {
+
+    let config = build_config(args.env_config, &file_path);
+    let bridge = Bridge::build(config, &password, None).await.unwrap();
+    let token = bridge.token().clone();
+
+    if !https_address.is_empty() {
+        let listener_https = tokio::net::TcpListener::bind(https_address)
+        .await
+        .unwrap();
+
+        let https_port = listener_https.local_addr().unwrap().port();
+
+        tokio::spawn(redirect_http_to_https(https_port, listener_http));
+        
+
+        rustls::crypto::ring::default_provider().install_default().unwrap();
+
+        let tls = RustlsConfig::from_pem_file(
+            PathBuf::from(&build_https_cert()),
+            PathBuf::from(&build_https_private_key())
+        )
+        .await
+        .unwrap();
+
+        let handle = Handle::new();
+    
+        let handle_clone = handle.clone();
+        tokio::spawn(async move {
+            tokio::select! {
+                _ = token.cancelled() => {
+                    handle.graceful_shutdown(None);
+                }
+            }
+        });
+
+        let addr = listener_https.local_addr().unwrap();
+        
+        axum_server::bind_rustls(addr, tls).handle(handle_clone).serve(tower_trace(build_routes(bridge))
+        .layer(cors)
+        .into_make_service_with_connect_info::<SocketAddr>()).await.unwrap();
+    } else {
+        axum::serve(
+            listener_http,
+            tower_trace(build_routes(bridge))
+                .layer(cors)
+                .into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .with_graceful_shutdown(async move {
+            tokio::select! {
+                _ = token.cancelled() => {
+                }
+            }
+        })
+        .await
+        .unwrap()
+    }
+}
+
+
+async fn redirect_http_to_https(https: u16, listener_http: TcpListener) {
+    fn make_https(host: String, uri: Uri, ports: Ports) -> Result<Uri, BoxError> {
+        let mut parts = uri.into_parts();
+
+        parts.scheme = Some(axum::http::uri::Scheme::HTTPS);
+
+        if parts.path_and_query.is_none() {
+            parts.path_and_query = Some("/".parse().unwrap());
+        }
+
+        let https_host = host.replace(&ports.http.to_string(), &ports.https.to_string());
+        parts.authority = Some(https_host.parse()?);
+
+        Ok(Uri::from_parts(parts)?)
+    }
+    let ports = Ports { https: https.to_string(), http: listener_http.local_addr().unwrap().port().to_string() };
+
+    let redirect = move |Host(host): Host, uri: Uri| async move {
+        match make_https(host, uri, ports) {
+            Ok(uri) => Ok(Redirect::permanent(&uri.to_string())),
+            Err(error) => {
+                tracing::warn!(%error, "failed to convert URI to HTTPS");
+                Err(StatusCode::BAD_REQUEST)
             }
         }
-    })
-    .await
-    .unwrap()
+    };
+
+    axum::serve(listener_http, redirect.into_make_service())
+        .await
+        .unwrap();
 }
