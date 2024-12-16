@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, path::PathBuf};
+use std:: {net::SocketAddr, path::PathBuf};
 
 use axum::{extract::Host, handler::HandlerWithoutStateExt, http::{header, Method, StatusCode, Uri}, response::Redirect, BoxError};
 use axum_server::{tls_rustls::RustlsConfig, Handle};
@@ -9,7 +9,6 @@ use kore_bridge::{
     Bridge,
 };
 use middleware::tower_trace;
-use rustls::crypto::{ring, CryptoProvider};
 use server::build_routes;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
@@ -61,15 +60,9 @@ async fn main() {
     let token = bridge.token().clone();
 
     if !https_address.is_empty() {
-        let listener_https = tokio::net::TcpListener::bind(https_address)
-        .await
-        .unwrap();
+        let https_address = https_address.parse::<SocketAddr>().unwrap();
 
-        let https_port = listener_https.local_addr().unwrap().port();
-
-        tokio::spawn(redirect_http_to_https(https_port, listener_http));
-        
-
+        tokio::spawn(redirect_http_to_https(https_address.port(), listener_http));
         rustls::crypto::ring::default_provider().install_default().unwrap();
 
         let tls = RustlsConfig::from_pem_file(
@@ -90,9 +83,7 @@ async fn main() {
             }
         });
 
-        let addr = listener_https.local_addr().unwrap();
-        
-        axum_server::bind_rustls(addr, tls).handle(handle_clone).serve(tower_trace(build_routes(bridge))
+        axum_server::bind_rustls(https_address, tls).handle(handle_clone).serve(tower_trace(build_routes(bridge))
         .layer(cors)
         .into_make_service_with_connect_info::<SocketAddr>()).await.unwrap();
     } else {
