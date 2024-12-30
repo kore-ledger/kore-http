@@ -18,7 +18,8 @@ mod enviroment;
 mod error;
 mod middleware;
 mod server;
-
+#[cfg(feature = "doc")]
+mod doc;
 #[derive(Clone)]
 struct Ports {
     http: String,
