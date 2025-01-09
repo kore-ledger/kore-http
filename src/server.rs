@@ -5,31 +5,32 @@ use axum::{
     routing::{delete, get, patch, post, put},
     Extension, Json, Router,
 };
-use kore_bridge::{model::BridgeSignedEventRequest, Bridge, GovsData, RegisterData, RequestData};
+use kore_bridge::{model::BridgeSignedEventRequest, Bridge};
 use serde::Deserialize;
 use serde_json::Value;
 use tower::ServiceBuilder;
-use crate::error::Error;
+use utoipa::ToSchema;
+use crate::{error::Error, wrappers::{GovsData, RegisterData, RequestDB, RequestData}};
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct SubjectQuery {
     active: Option<bool>,
     schema: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct GovQuery {
     active: Option<bool>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct EventsQuery {
     quantity: Option<u64>,
     page: Option<u64>,
 }
 
 #[cfg(feature = "doc")]
-use crate ::doc::utoipa::ApiDoc;
+use crate ::doc::ApiDoc;
 #[cfg(feature = "doc")]
 use utoipa::OpenApi;
 #[cfg(feature = "doc")]
@@ -75,7 +76,7 @@ async fn send_event_request(
     Json(request): Json<BridgeSignedEventRequest>,
 ) -> Result<Json<RequestData>, Error> {
     match bridge.send_event_request(request).await {
-        Ok(response) => Ok(Json(response)),
+        Ok(response) => Ok(Json(RequestData::from(response))),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -91,7 +92,7 @@ async fn send_event_request(
 ///
 /// # Returns
 ///
-/// * `Result<Json<String>, Error>` - returns an Ok in a JSON or an error
+/// * `Result<Json<RequestDB>, Error>` - returns an Ok in a JSON or an error
 #[cfg_attr(feature = "doc", utoipa::path(
     get,
     path = "/event-request/{request-id}",
@@ -101,9 +102,13 @@ async fn send_event_request(
         ("request-id" = String, Path, description = "Event Request's unique id"),
     ),
     responses(
-        (status = 200, description = "Request Data successfully retrieved", body = String,
+        (status = 200, description = "Request Data successfully retrieved", body = RequestDB,
         example = json!(
-                "Finish"
+            {
+                "status": "Finish",
+                "version": 0,
+                "error": null
+            }
         )),
         (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
@@ -113,9 +118,9 @@ async fn send_event_request(
 async fn get_request_state(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(request_id): Path<String>,
-) -> Result<Json<String>, Error> {
+) -> Result<Json<RequestDB>, Error> {
     match bridge.get_request_state(request_id).await {
-        Ok(response) => Ok(Json(response)),
+        Ok(response) => Ok(Json(RequestDB::from(response))),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -410,7 +415,7 @@ async fn update_subject(
     operation_id = "Get All Governances",
     tag = "Governances",
     params(
-        ("parameters" = Query<GovQuery>, Query, description = "The query parameters for the request"),
+        ("parameters" = GovQuery, Query, description = "The query parameters for the request"),
     ),
     responses(
         (status = 200, description = "Gets all the governorships to which the node belongs", body = [GovsData],
@@ -435,7 +440,7 @@ async fn get_all_govs(
     Query(parameters): Query<GovQuery>,
 ) -> Result<Json<Vec<GovsData>>, Error> {
     match bridge.get_all_govs(parameters.active).await {
-        Ok(response) => Ok(Json(response)),
+        Ok(response) => Ok(Json(response.iter().map(|x| GovsData::from(x.clone())).collect())),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -461,7 +466,7 @@ async fn get_all_govs(
     tag = "Subjects",
     params(
         ("subject_id" = String, Path, description = "Approval's unique id"),
-        ("parameters" = Query<SubjectQuery>, Query, description = "The query parameters for the request"),
+        ("parameters" = SubjectQuery, Query, description = "The query parameters for the request"),
     ),
     responses(
         (status = 200, description = "Subjects Data successfully retrieved", body = [RegisterData]),
@@ -479,7 +484,7 @@ async fn get_all_subjects(
         .get_all_subjs(governance_id, parameters.active, parameters.schema)
         .await
     {
-        Ok(response) => Ok(Json(response)),
+        Ok(response) => Ok(Json(response.iter().map(|x| RegisterData::from(x.clone())).collect())),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -504,7 +509,7 @@ async fn get_all_subjects(
     tag = "Events",
     params(
         ("subject_id" = String, Path, description = "Approval's unique id"),
-        ("parameters" = Query<EventsQuery>, Query, description = "The query parameters for the request"),
+        ("parameters" = EventsQuery, Query, description = "The query parameters for the request"),
     ),
     responses(
         (status = 200, description = "Allows obtaining specific events of a subject by its identifier.", body = [Value],
@@ -792,32 +797,33 @@ async fn get_peer_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<String> 
 
 pub fn build_routes(bridge: Bridge) -> Router {
     let bridge = Arc::new(bridge);
-    // TODO añadir ruta para consultar todas las request
     let routes=Router::new()
-        .route("/signatures/:subject_id", get(get_signatures))
-        .route("/state/:subject_id", get(get_state))
-        .route("/events/:subject_id", get(get_events))
-        .route("/register-subjects/:governance_id", get(get_all_subjects))
+        .route("/signatures/{subject_id}", get(get_signatures))
+        .route("/state/{subject_id}", get(get_state))
+        .route("/events/{subject_id}", get(get_events))
+        .route("/register-subjects/{governance_id}", get(get_all_subjects))
         .route("/register-governances", get(get_all_govs))
-        .route("/update/:subject_id", post(update_subject))
-        .route("/auth/:subject_id", delete(delete_auth_subject))
-        .route("/auth/:subject_id", get(get_witnesses_subject))
+        .route("/update/{subject_id}", post(update_subject))
+        .route("/auth/{subject_id}", delete(delete_auth_subject))
+        .route("/auth/{subject_id}", get(get_witnesses_subject))
         .route("/auth", get(get_all_auth_subjects))
-        .route("/auth/:subject_id", put(put_auth))
-        .route("/approval-request/:subject_id", patch(patch_approval))
-        .route("/approval-request/:subject_id", get(get_approval))
-        .route("/event-request/:request_id", get(get_request_state))
+        .route("/auth/{subject_id}", put(put_auth))
+        .route("/approval-request/{subject_id}", patch(patch_approval))
+        .route("/approval-request/{subject_id}", get(get_approval))
+        .route("/event-request/{request_id}", get(get_request_state))
         .route("/event-request", post(send_event_request))
         .route("/controller-id", get(get_controller_id))
         .route("/peer-id", get(get_peer_id))
         .layer(ServiceBuilder::new().layer(Extension(bridge)));
 
-        #[cfg(feature = "doc")]
-        println!("{}", ApiDoc::openapi().to_pretty_json().unwrap());
-        return Router::new().merge(routes).merge(
-            RapiDoc::with_openapi("/doc/koreapi.json", ApiDoc::openapi()).path("/doc"),
-    
-        );
+        #[cfg(feature = "doc")] {
+            println!("{}", ApiDoc::openapi().to_pretty_json().unwrap());
+            return Router::new().merge(routes).merge(
+                RapiDoc::with_openapi("/doc/koreapi.json", ApiDoc::openapi()).path("/doc"),
+        
+            );
+        }
+        
         #[cfg(not(feature = "doc"))]
         Router::new().merge(routes)
     }

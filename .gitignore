@@ -6,3 +6,4 @@ contracts
 nodo*
 *.json
 selfsigned.*
+.DS_Store

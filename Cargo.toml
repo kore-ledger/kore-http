@@ -6,8 +6,8 @@ edition = "2021"
 [dependencies]
 kore-bridge = { path = "../kore/kore-bridge" }
 
-tokio = { version = "1.42.0", features = ["full"] }
-config = { version = "0.14.1", features = ["json", "toml", "yaml"]}
+tokio = { version = "1.43.0", features = ["full"] }
+config = { version = "0.15.4", features = ["json", "toml", "yaml"]}
 serde_json = {version = "1.0.133"}
 serde = {version = "1.0.215"}
 tracing = "0.1.41"
@@ -15,12 +15,13 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 rustls = { version = "0.23.20", features = ["ring"] }
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
-axum = { version = "0.7.5" }
-tower = "0.5.1"
+axum = { version = "0.8.1" }
+axum-extra = "0.10.0"
+tower = "0.5.2"
 tower-http = {version = "0.6.2", features = ["trace", "metrics", "cors"]}
-utoipa = { version = "4.2.3", features = ["axum_extras"], optional = true}
-utoipa-rapidoc = { version = "4.0.0", features = ["axum"], optional = true}
+utoipa = { version = "5.3.1", features = ["axum_extras"]}
+utoipa-rapidoc = { version = "5.0.1", features = ["axum"]}
 
 [features]
 default = ["doc"]
-doc = ["utoipa-rapidoc", "utoipa"]
+doc = []

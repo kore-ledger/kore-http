@@ -1,6 +1,7 @@
 use std:: {net::SocketAddr, path::PathBuf};
 
-use axum::{extract::Host, handler::HandlerWithoutStateExt, http::{header, Method, StatusCode, Uri}, response::Redirect, BoxError};
+use axum::{handler::HandlerWithoutStateExt, http::{header, Method, StatusCode, Uri}, response::Redirect, BoxError};
+use axum_extra::extract::Host;
 use axum_server::{tls_rustls::RustlsConfig, Handle};
 use enviroment:: { build_address_http, build_address_https, build_https_cert, build_https_private_key };
 use kore_bridge::{
@@ -18,6 +19,8 @@ mod enviroment;
 mod error;
 mod middleware;
 mod server;
+mod wrappers;
+
 #[cfg(feature = "doc")]
 mod doc;
 #[derive(Clone)]
