@@ -21,7 +21,6 @@ mod middleware;
 mod server;
 mod wrappers;
 
-#[cfg(feature = "doc")]
 mod doc;
 #[derive(Clone)]
 struct Ports {

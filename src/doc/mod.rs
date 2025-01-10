@@ -43,6 +43,8 @@ use crate::server::*;
         get_signatures,
         get_controller_id,
         get_peer_id,
+        get_first_or_end_events,
+        get_event_sn
     ),
     tags(
         (name = "Auth", description = "Endpoints related to authorization."),

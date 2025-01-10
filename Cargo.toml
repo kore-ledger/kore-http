@@ -13,7 +13,7 @@ serde = {version = "1.0.215"}
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
-rustls = { version = "0.23.20", features = ["ring"] }
+rustls = { version = "0.23.21", features = ["ring"] }
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
 axum = { version = "0.8.1" }
 axum-extra = "0.10.0"
@@ -23,5 +23,4 @@ utoipa = { version = "5.3.1", features = ["axum_extras"]}
 utoipa-rapidoc = { version = "5.0.1", features = ["axum"]}
 
 [features]
-default = ["doc"]
-doc = []
+default = []

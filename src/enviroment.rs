@@ -15,3 +15,7 @@ pub fn build_https_cert() -> String {
 pub fn build_https_private_key() -> String {
     env::var("KORE_HTTPS_PRIVATE_KEY").unwrap_or_default()
 }
+
+pub fn build_doc() -> bool {
+    env::var("KORE_HTTPS_DOC").unwrap_or_default() == "true"
+}

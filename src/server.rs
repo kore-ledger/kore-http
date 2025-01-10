@@ -10,7 +10,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use tower::ServiceBuilder;
 use utoipa::ToSchema;
-use crate::{error::Error, wrappers::{GovsData, RegisterData, RequestDB, RequestData}};
+use crate::{enviroment::build_doc, error::Error, wrappers::{ApproveInfo, GovsData, RegisterData, RequestData, RequestInfo}};
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct SubjectQuery {
@@ -29,11 +29,19 @@ pub struct EventsQuery {
     page: Option<u64>,
 }
 
-#[cfg(feature = "doc")]
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct EventSnQuery {
+    sn: u64,
+}
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct EventFirstLastQuery {
+    quantity: Option<u64>,
+    reverse: Option<bool>,
+    success: Option<bool>,
+}
+
 use crate ::doc::ApiDoc;
-#[cfg(feature = "doc")]
 use utoipa::OpenApi;
-#[cfg(feature = "doc")]
 use utoipa_rapidoc::RapiDoc;
 
 
@@ -51,7 +59,7 @@ use utoipa_rapidoc::RapiDoc;
 /// # Returns
 ///
 /// * `Result<Json<RequestData>, Error>` - The response to the event request wrapped in a JSON object, or an error.
-#[ cfg_attr(feature = "doc", utoipa::path(
+#[ utoipa::path(
     post,
     path = "/event-request",
     operation_id = "Send Event Request",
@@ -70,7 +78,7 @@ use utoipa_rapidoc::RapiDoc;
         (status = 409, description = "Conflict"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn send_event_request(
     Extension(bridge): Extension<Arc<Bridge>>,
     Json(request): Json<BridgeSignedEventRequest>,
@@ -92,8 +100,8 @@ async fn send_event_request(
 ///
 /// # Returns
 ///
-/// * `Result<Json<RequestDB>, Error>` - returns an Ok in a JSON or an error
-#[cfg_attr(feature = "doc", utoipa::path(
+/// * `Result<Json<RequestInfo>, Error>` - returns an Ok in a JSON or an error
+#[utoipa::path(
     get,
     path = "/event-request/{request-id}",
     operation_id = "Get Request State",
@@ -102,7 +110,7 @@ async fn send_event_request(
         ("request-id" = String, Path, description = "Event Request's unique id"),
     ),
     responses(
-        (status = 200, description = "Request Data successfully retrieved", body = RequestDB,
+        (status = 200, description = "Request Data successfully retrieved", body = RequestInfo,
         example = json!(
             {
                 "status": "Finish",
@@ -114,13 +122,13 @@ async fn send_event_request(
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn get_request_state(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(request_id): Path<String>,
-) -> Result<Json<RequestDB>, Error> {
+) -> Result<Json<RequestInfo>, Error> {
     match bridge.get_request_state(request_id).await {
-        Ok(response) => Ok(Json(RequestDB::from(response))),
+        Ok(response) => Ok(Json(RequestInfo::from(response))),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -136,8 +144,8 @@ async fn get_request_state(
 ///
 /// # Returns
 ///
-/// * `Result<Json<Value>, Error>` - returns an Ok in a JSON or an error
-#[cfg_attr(feature = "doc", utoipa::path(
+/// * `Result<Json<ApproveInfo>, Error>` - returns an Ok in a JSON or an error
+#[utoipa::path(
     get,
     path = "/approval-request/{subject_id}",
     operation_id = "Get one Approval Request Data",
@@ -151,13 +159,13 @@ async fn get_request_state(
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn get_approval(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
-) -> Result<Json<Value>, Error> {
+) -> Result<Json<ApproveInfo>, Error> {
     match bridge.get_approval(subject_id).await {
-        Ok(response) => Ok(Json(response)),
+        Ok(response) => Ok(Json(ApproveInfo::from(response))),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -175,7 +183,7 @@ async fn get_approval(
 /// # Returns
 ///
 /// * `Result<Json<String>, Error>` - The approval request in JSON format or an error if the request fails.
-#[ cfg_attr(feature = "doc", utoipa::path(
+#[ utoipa::path(
     patch,
     path = "/approval-request/{subject_id}",
     operation_id = "Set your Aprroval for a request",
@@ -194,7 +202,7 @@ async fn get_approval(
         (status = 409, description = "Conflict"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn patch_approval(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
@@ -219,7 +227,7 @@ async fn patch_approval(
 /// # Returns
 ///
 /// * `Result<Json<String>, Error>` - The result of the approval as a JSON object or an error if the request fails.
-#[ cfg_attr(feature = "doc",  utoipa::path(
+#[  utoipa::path(
     put,
     path = "/auth/{subject_id}",
     operation_id = "Put Authorization",
@@ -238,7 +246,7 @@ async fn patch_approval(
         (status = 409, description = "Conflict"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn put_auth(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
@@ -261,7 +269,7 @@ async fn put_auth(
 /// # Returns
 ///
 /// * `Result<Json<Vec<String>>, Error>` - A list of authorized subjects in JSON format or an error if the request fails.
-#[ cfg_attr(feature = "doc", utoipa::path(
+#[ utoipa::path(
     get,
     path = "/auth",
     operation_id = "Get authorized subjects",
@@ -276,7 +284,7 @@ async fn put_auth(
         (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn get_all_auth_subjects(
     Extension(bridge): Extension<Arc<Bridge>>,
 ) -> Result<Json<Vec<String>>, Error> {
@@ -298,7 +306,7 @@ async fn get_all_auth_subjects(
 /// # Returns
 ///
 /// * `Result<Json<Vec<String>>, Error>` - a list of witness nodes in Json format or an error
-#[ cfg_attr(feature = "doc", utoipa::path(
+#[ utoipa::path(
     get,
     path = "/auth/{subject_id}",
     operation_id = "Get witnesses subject",
@@ -311,7 +319,7 @@ async fn get_all_auth_subjects(
         (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn get_witnesses_subject(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
@@ -334,7 +342,7 @@ async fn get_witnesses_subject(
 /// # Returns
 ///
 /// * `Result<Json<String>, Error>` - Ok in JSON format or an error if the request fails.
-#[ cfg_attr(feature = "doc", utoipa::path(
+#[ utoipa::path(
     delete,
     path = "/auth/{subject_id}",
     operation_id = "Delete authorized subjects",
@@ -350,7 +358,7 @@ async fn get_witnesses_subject(
         (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn delete_auth_subject(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
@@ -373,7 +381,7 @@ async fn delete_auth_subject(
 /// # Returns
 ///
 /// * `Result<Json<String>, Error>` - A message in JSON format or an error if the request fails.
-#[ cfg_attr(feature = "doc", utoipa::path(
+#[ utoipa::path(
     put,
     path = "/update/{subject_id}",
     operation_id = "Update Subject",
@@ -386,7 +394,7 @@ async fn delete_auth_subject(
         (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn update_subject(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
@@ -409,7 +417,7 @@ async fn update_subject(
 /// # Returns
 ///
 /// * `Result<Json<Vec<GovsData>>, Error>` - A JSON with governance information or an error if the request fails.
-#[cfg_attr(feature = "doc",  utoipa::path(
+#[ utoipa::path(
     get,
     path = "/register-governances",
     operation_id = "Get All Governances",
@@ -434,7 +442,7 @@ async fn update_subject(
         (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn get_all_govs(
     Extension(bridge): Extension<Arc<Bridge>>,
     Query(parameters): Query<GovQuery>,
@@ -459,7 +467,7 @@ async fn get_all_govs(
 /// # Returns
 ///
 /// * `Result<Json<Vec<RegisterData>>, Error>` - A list of subjects in JSON format or an error if the request fails.
-#[ cfg_attr(feature = "doc",  utoipa::path(
+#[  utoipa::path(
     get,
     path = "/register-subjects/{governance_id}",
     operation_id = "Get All Subjects Data",
@@ -474,7 +482,7 @@ async fn get_all_govs(
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn get_all_subjects(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(governance_id): Path<String>,
@@ -502,7 +510,7 @@ async fn get_all_subjects(
 /// # Returns
 ///
 /// * `Result<Json<Value>, Error>` - A list of events in JSON format or an error if the request fails.
-#[cfg_attr(feature = "doc",  utoipa::path(
+#[ utoipa::path(
     get,
     path = "/events/{subject_id}",
     operation_id = "Get Subject Events",
@@ -541,7 +549,7 @@ async fn get_all_subjects(
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn get_events(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
@@ -568,7 +576,7 @@ async fn get_events(
 /// # Returns
 ///
 /// * `Result<Json<Value>, Error>` -the state of the subject in JSON format or an error if the request fails.
-#[ cfg_attr(feature = "doc", utoipa::path(
+#[utoipa::path(
     get,
     path = "/state/{subject_id}",
     operation_id = "Get Subject State",
@@ -673,7 +681,7 @@ async fn get_events(
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn get_state(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
@@ -696,7 +704,7 @@ async fn get_state(
 /// # Returns
 ///
 /// * `Result<Json<Value>, Error>` - the signature in JSON format or an error if the request fails.
-#[ cfg_attr(feature = "doc", utoipa::path(
+#[ utoipa::path(
     get,
     path = "/signatures/{subject_id}",
     operation_id = "Get Subject Signatures",
@@ -728,7 +736,7 @@ async fn get_state(
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
-))]
+)]
 async fn get_signatures(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
@@ -751,7 +759,7 @@ async fn get_signatures(
 ///
 /// * `Json<String>` - Returns the controller-id of the node in a Json
 
-#[ cfg_attr(feature = "doc", utoipa::path(
+#[ utoipa::path(
     get,
     path = "/controller-id",
     operation_id = "Get controller-id",
@@ -762,7 +770,7 @@ async fn get_signatures(
             "E2ZY7GjU14U3m-iAqvhQM6kiG62uqLdBMBwv4J-4tzwI"
         )),
     )
-))]
+)]
 async fn get_controller_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<String> {
     Json(bridge.controller_id())
 }
@@ -778,8 +786,7 @@ async fn get_controller_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<St
 /// # Returns
 ///
 /// * `Json<String>` - Returns the peer id of the node in a Json
-
-#[ cfg_attr(feature = "doc", utoipa::path(
+#[ utoipa::path(
     get,
     path = "/peer-id",
     operation_id = "Get peer-id",
@@ -790,9 +797,143 @@ async fn get_controller_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<St
             "12D3KooWQTjWCGZa2f6ZVkwwcbEb4ghtS49AcssJSrATFBNxDpR7"
         )),
     )
-))]
+)]
 async fn get_peer_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<String> {
     Json(bridge.peer_id())
+}
+
+/// Get events of a sn
+///
+/// Allows obtaining specific events of a subject by its identifier and sn.
+///
+/// # Parameters
+///
+/// * `Extension(bridge): Extension<Arc<Bridge>>` - The bridge extension wrapped in an `Arc`.
+/// * `Path(subject_id): Path<String>` - The identifier of the subject as a path parameter.
+/// * `Query(parameters): Query<EventSnQuery>` - The query parameters for the request.
+///
+/// # Returns
+///
+/// * `Result<Json<Value>, Error>` - A list of events in JSON format or an error if the request fails.
+#[utoipa::path(
+    get,
+    path = "/events/{sn}",
+    operation_id = "Get Subject Events with sn",
+    tag = "Events",
+    params(
+        ("subject_id" = String, Path, description = "Approval's unique id"),
+        ("parameters" = EventSnQuery, Query, description = "The query parameters for the request"),
+    ),
+    responses(
+        (status = 200, description = "Allows obtaining specific events of a subject by its identifier and sn", body = [Value],
+        example = json!(
+            {
+                "events": [
+                    {
+                        "data": "[]",
+                        "event_req": {
+                            "Create": {
+                                "governance_id": "",
+                                "namespace": [],
+                                "schema_id": "governance"
+                            }
+                        },
+                        "sn": 0,
+                        "subject_id": "Jd_vA5Dl1epomG7wyeHiqgKdOIBi28vNgHjRl6hy1N5w",
+                        "succes": true
+                    }
+                ],
+                "paginator": {
+                    "next": null,
+                    "pages": 1,
+                    "prev": null
+                }
+            }
+        )),
+        (status = 400, description = "Bad Request"),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Internal Server Error"),
+    )
+)]
+async fn get_event_sn(
+    Extension(bridge): Extension<Arc<Bridge>>,
+    Path(subject_id): Path<String>,
+    Query(parameters): Query<EventSnQuery>,
+) -> Result<Json<Value>, Error> {
+    match bridge
+        .get_event_sn(subject_id, parameters.sn)
+        .await
+    {
+        Ok(response) => Ok(Json(response)),
+        Err(e) => Err(Error::Kore(e.to_string())),
+    }
+}
+
+/// Get first or last events of a subject
+///
+/// Given a subject id a specific number of events can be obtained, depending on the quantity, reverse and success parameters.
+///
+/// # Parameters
+///
+/// * `Extension(bridge): Extension<Arc<Bridge>>` - The bridge extension wrapped in an `Arc`.
+/// * `Path(subject_id): Path<String>` - The identifier of the subject as a path parameter.
+/// * `Query(parameters): Query<EventFirstLastQuery>` - The query parameters for the request.
+///
+/// # Returns
+///
+/// * `Result<Json<Value>, Error>` - A list of events in JSON format or an error if the request fails.
+#[utoipa::path(
+    get,
+    path = "/events/{first_last}",
+    operation_id = "Get specifics Subject Events",
+    tag = "Events",
+    params(
+        ("subject_id" = String, Path, description = "Approval's unique id"),
+        ("parameters" = EventFirstLastQuery, Query, description = "The query parameters for the request"),
+    ),
+    responses(
+        (status = 200, description = "Allows obtaining specific events of a subject by its identifier and sn", body = [Value],
+        example = json!(
+            {
+                "events": [
+                    {
+                        "data": "[]",
+                        "event_req": {
+                            "Create": {
+                                "governance_id": "",
+                                "namespace": [],
+                                "schema_id": "governance"
+                            }
+                        },
+                        "sn": 0,
+                        "subject_id": "Jd_vA5Dl1epomG7wyeHiqgKdOIBi28vNgHjRl6hy1N5w",
+                        "succes": true
+                    }
+                ],
+                "paginator": {
+                    "next": null,
+                    "pages": 1,
+                    "prev": null
+                }
+            }
+        )),
+        (status = 400, description = "Bad Request"),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Internal Server Error"),
+    )
+)]
+async fn get_first_or_end_events(
+    Extension(bridge): Extension<Arc<Bridge>>,
+    Path(subject_id): Path<String>,
+    Query(parameters): Query<EventFirstLastQuery>,
+) -> Result<Json<Value>, Error> {
+    match bridge
+        .get_first_or_end_events(subject_id, parameters.quantity, parameters.reverse, parameters.success)
+        .await
+    {
+        Ok(response) => Ok(Json(response)),
+        Err(e) => Err(Error::Kore(e.to_string())),
+    }
 }
 
 pub fn build_routes(bridge: Bridge) -> Router {
@@ -801,6 +942,8 @@ pub fn build_routes(bridge: Bridge) -> Router {
         .route("/signatures/{subject_id}", get(get_signatures))
         .route("/state/{subject_id}", get(get_state))
         .route("/events/{subject_id}", get(get_events))
+        .route("/events/{sn}", get(get_event_sn))
+        .route("/events/{first_last}", get(get_first_or_end_events))
         .route("/register-subjects/{governance_id}", get(get_all_subjects))
         .route("/register-governances", get(get_all_govs))
         .route("/update/{subject_id}", post(update_subject))
@@ -816,15 +959,12 @@ pub fn build_routes(bridge: Bridge) -> Router {
         .route("/peer-id", get(get_peer_id))
         .layer(ServiceBuilder::new().layer(Extension(bridge)));
 
-        #[cfg(feature = "doc")] {
-            println!("{}", ApiDoc::openapi().to_pretty_json().unwrap());
-            return Router::new().merge(routes).merge(
+        if build_doc() {
+            Router::new().merge(routes).merge(
                 RapiDoc::with_openapi("/doc/koreapi.json", ApiDoc::openapi()).path("/doc"),
-        
-            );
+            )
+        } else {
+            Router::new().merge(routes)
         }
-        
-        #[cfg(not(feature = "doc"))]
-        Router::new().merge(routes)
     }
 
