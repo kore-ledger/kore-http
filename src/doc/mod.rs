@@ -1,5 +1,5 @@
 use utoipa::OpenApi;
-use crate::server::*;
+use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestInfo, CreateRequestInfo, EOLRequestInfo, EventInfo, EventRequestInfo, FactInfo, FactRequestInfo, GovsData, Namespace, Paginator, PaginatorEvents, ProtocolsError, ProtocolsSignaturesInfo, RegisterData, RequestData, RequestInfo, SignatureInfo, SignaturesInfo, SignedInfo, SubjectInfo, TimeOutResponseInfo, TransferRequestInfo}};
 /// Kore HTTP
 ///
 /// This API provides interaction with Kore Ledger nodes using the HTTP protocol.
@@ -45,6 +45,39 @@ use crate::server::*;
         get_peer_id,
         get_first_or_end_events,
         get_event_sn
+    ),
+    components(
+        schemas(
+            SubjectQuery,
+            GovQuery,
+            EventsQuery,
+            EventSnQuery,
+            EventFirstLastQuery,
+            PaginatorEvents,
+            EventInfo,
+            Paginator,
+            ProtocolsError,
+            EventRequestInfo,
+            CreateRequestInfo,
+            TransferRequestInfo,
+            ConfirmRequestInfo,
+            EOLRequestInfo,
+            FactRequestInfo,
+            Namespace,
+            RequestData,
+            GovsData,
+            RegisterData,
+            RequestInfo,
+            ApproveInfo,
+            ApprovalReqInfo,
+            SignedInfo<FactInfo>,
+            FactInfo,
+            SignatureInfo,
+            SubjectInfo,
+            SignaturesInfo,
+            ProtocolsSignaturesInfo,
+            TimeOutResponseInfo
+        )
     ),
     tags(
         (name = "Auth", description = "Endpoints related to authorization."),

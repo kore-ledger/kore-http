@@ -7,10 +7,9 @@ use axum::{
 };
 use kore_bridge::{model::BridgeSignedEventRequest, Bridge};
 use serde::Deserialize;
-use serde_json::Value;
 use tower::ServiceBuilder;
 use utoipa::ToSchema;
-use crate::{enviroment::build_doc, error::Error, wrappers::{ApproveInfo, GovsData, RegisterData, RequestData, RequestInfo}};
+use crate::{enviroment::build_doc, error::Error, wrappers::{ApproveInfo, EventInfo, GovsData, PaginatorEvents, RegisterData, RequestData, RequestInfo, SignaturesInfo, SubjectInfo}};
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct SubjectQuery {
@@ -154,7 +153,7 @@ async fn get_request_state(
         ("subject_id" = String, Path, description = "subject unique id"),
     ),
     responses(
-        (status = 200, description = "Approval Data successfully retrieved", body = Value),
+        (status = 200, description = "Approval Data successfully retrieved", body = ApproveInfo),
         (status = 400, description = "Bad Request"),
         (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
@@ -509,7 +508,7 @@ async fn get_all_subjects(
 ///
 /// # Returns
 ///
-/// * `Result<Json<Value>, Error>` - A list of events in JSON format or an error if the request fails.
+/// * `Result<Json<PaginatorEvents>, Error>` - A list of events in JSON format or an error if the request fails.
 #[ utoipa::path(
     get,
     path = "/events/{subject_id}",
@@ -520,12 +519,13 @@ async fn get_all_subjects(
         ("parameters" = EventsQuery, Query, description = "The query parameters for the request"),
     ),
     responses(
-        (status = 200, description = "Allows obtaining specific events of a subject by its identifier.", body = [Value],
+        (status = 200, description = "Allows obtaining specific events of a subject by its identifier.", body = [PaginatorEvents],
         example = json!(
             {
                 "events": [
                     {
-                        "data": "[]",
+                        "patch": "[]",
+                        "error": null,
                         "event_req": {
                             "Create": {
                                 "governance_id": "",
@@ -554,12 +554,12 @@ async fn get_events(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
     Query(parameters): Query<EventsQuery>,
-) -> Result<Json<Value>, Error> {
+) -> Result<Json<PaginatorEvents>, Error> {
     match bridge
         .get_events(subject_id, parameters.quantity, parameters.page)
         .await
     {
-        Ok(response) => Ok(Json(response)),
+        Ok(response) => Ok(Json(PaginatorEvents::from(response))),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -575,7 +575,7 @@ async fn get_events(
 ///
 /// # Returns
 ///
-/// * `Result<Json<Value>, Error>` -the state of the subject in JSON format or an error if the request fails.
+/// * `Result<Json<SubjectInfo>, Error>` -the state of the subject in JSON format or an error if the request fails.
 #[utoipa::path(
     get,
     path = "/state/{subject_id}",
@@ -585,7 +585,7 @@ async fn get_events(
         ("subject-id" = String, Path, description = "Subject's unique id"),
     ),
     responses(
-        (status = 200, description = "Allows obtaining specific state of a subject by its identifier.", body = [Value],
+        (status = 200, description = "Allows obtaining specific state of a subject by its identifier.", body = [SubjectInfo],
         example = json!(
             {
                 "active": true,
@@ -685,9 +685,9 @@ async fn get_events(
 async fn get_state(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
-) -> Result<Json<Value>, Error> {
+) -> Result<Json<SubjectInfo>, Error> {
     match bridge.get_subject(subject_id).await {
-        Ok(response) => Ok(Json(response)),
+        Ok(response) => Ok(Json(SubjectInfo::from(response))),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -703,7 +703,7 @@ async fn get_state(
 ///
 /// # Returns
 ///
-/// * `Result<Json<Value>, Error>` - the signature in JSON format or an error if the request fails.
+/// * `Result<Json<SignaturesInfo>, Error>` - the signature in JSON format or an error if the request fails.
 #[ utoipa::path(
     get,
     path = "/signatures/{subject_id}",
@@ -713,7 +713,7 @@ async fn get_state(
         ("subject-id" = String, Path, description = "Subject's unique id"),
     ),
     responses(
-        (status = 200, description = "the signature in JSON format", body = [Value],
+        (status = 200, description = "the signature in JSON format", body = [SignaturesInfo],
         example = json!(
             {
                 "signatures_appr": null,
@@ -740,9 +740,9 @@ async fn get_state(
 async fn get_signatures(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
-) -> Result<Json<Value>, Error> {
+) -> Result<Json<SignaturesInfo>, Error> {
     match bridge.get_signatures(subject_id).await {
-        Ok(response) => Ok(Json(response)),
+        Ok(response) => Ok(Json(SignaturesInfo::from(response))),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -814,10 +814,10 @@ async fn get_peer_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<String> 
 ///
 /// # Returns
 ///
-/// * `Result<Json<Value>, Error>` - A list of events in JSON format or an error if the request fails.
+/// * `Result<Json<EventInfo>, Error>` - A list of events in JSON format or an error if the request fails.
 #[utoipa::path(
     get,
-    path = "/events/{sn}",
+    path = "/event/{subject_id}",
     operation_id = "Get Subject Events with sn",
     tag = "Events",
     params(
@@ -825,12 +825,13 @@ async fn get_peer_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<String> 
         ("parameters" = EventSnQuery, Query, description = "The query parameters for the request"),
     ),
     responses(
-        (status = 200, description = "Allows obtaining specific events of a subject by its identifier and sn", body = [Value],
+        (status = 200, description = "Allows obtaining specific events of a subject by its identifier and sn", body = [EventInfo],
         example = json!(
             {
                 "events": [
                     {
-                        "data": "[]",
+                        "patch": "[]",
+                        "error": null,
                         "event_req": {
                             "Create": {
                                 "governance_id": "",
@@ -859,12 +860,12 @@ async fn get_event_sn(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
     Query(parameters): Query<EventSnQuery>,
-) -> Result<Json<Value>, Error> {
+) -> Result<Json<EventInfo>, Error> {
     match bridge
         .get_event_sn(subject_id, parameters.sn)
         .await
     {
-        Ok(response) => Ok(Json(response)),
+        Ok(response) => Ok(Json(EventInfo::from(response))),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -881,10 +882,10 @@ async fn get_event_sn(
 ///
 /// # Returns
 ///
-/// * `Result<Json<Value>, Error>` - A list of events in JSON format or an error if the request fails.
+/// * `Result<Json<EventInfo>, Error>` - A list of events in JSON format or an error if the request fails.
 #[utoipa::path(
     get,
-    path = "/events/{first_last}",
+    path = "/events-first-last/{subject_id}",
     operation_id = "Get specifics Subject Events",
     tag = "Events",
     params(
@@ -892,12 +893,13 @@ async fn get_event_sn(
         ("parameters" = EventFirstLastQuery, Query, description = "The query parameters for the request"),
     ),
     responses(
-        (status = 200, description = "Allows obtaining specific events of a subject by its identifier and sn", body = [Value],
+        (status = 200, description = "Allows obtaining specific events of a subject by its identifier and sn", body = [EventInfo],
         example = json!(
             {
                 "events": [
                     {
-                        "data": "[]",
+                        "patch": "[]",
+                        "error": null,
                         "event_req": {
                             "Create": {
                                 "governance_id": "",
@@ -926,12 +928,12 @@ async fn get_first_or_end_events(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
     Query(parameters): Query<EventFirstLastQuery>,
-) -> Result<Json<Value>, Error> {
+) -> Result<Json<Vec<EventInfo>>, Error> {
     match bridge
         .get_first_or_end_events(subject_id, parameters.quantity, parameters.reverse, parameters.success)
         .await
     {
-        Ok(response) => Ok(Json(response)),
+        Ok(response) => Ok(Json(response.iter().map(|x| EventInfo::from(x.clone())).collect())),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -942,8 +944,8 @@ pub fn build_routes(bridge: Bridge) -> Router {
         .route("/signatures/{subject_id}", get(get_signatures))
         .route("/state/{subject_id}", get(get_state))
         .route("/events/{subject_id}", get(get_events))
-        .route("/events/{sn}", get(get_event_sn))
-        .route("/events/{first_last}", get(get_first_or_end_events))
+        .route("/event/{subject_id}", get(get_event_sn))
+        .route("/events-first-last/{subject_id}", get(get_first_or_end_events))
         .route("/register-subjects/{governance_id}", get(get_all_subjects))
         .route("/register-governances", get(get_all_govs))
         .route("/update/{subject_id}", post(update_subject))
