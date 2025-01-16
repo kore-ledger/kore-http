@@ -350,7 +350,7 @@ async fn get_witnesses_subject(
         ("subject_id" = String, Path, description = "Approval's unique id"),
     ),
     responses(
-        (status = 200, description = "Ok in JSON format", body = [String],
+        (status = 200, description = "Ok in JSON format", body = String,
         example = json!(
             "Ok"
         )),
@@ -389,7 +389,7 @@ async fn delete_auth_subject(
         ("subject_id" = String, Path, description = "Approval's unique id"),
     ),
     responses(
-        (status = 200, description = "Subject Data successfully retrieved", body = [String]),
+        (status = 200, description = "Subject Data successfully retrieved", body = String),
         (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
@@ -425,7 +425,7 @@ async fn update_subject(
         ("subject_id" = String, Path, description = "Approval's unique id"),
     ),
     responses(
-        (status = 200, description = "Subject Data successfully retrieved", body = [String]),
+        (status = 200, description = "Subject Data successfully retrieved", body = String),
         (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
@@ -1005,4 +1005,3 @@ pub fn build_routes(bridge: Bridge) -> Router {
             Router::new().merge(routes)
         }
     }
-    
