@@ -404,6 +404,41 @@ async fn update_subject(
     }
 }
 
+/// Manual Update Subject
+///
+/// Manual update an subject given its identifier
+///
+/// # Parameters
+///
+/// * `Extension(bridge): Extension<Arc<Bridge>>` - bridge extension wrapped in an `Arc`.
+/// * `Path(subject_id): Path<String>` - The identifier of the subject as a path parameter.
+///
+/// # Returns
+///
+/// * `Result<Json<String>, Error>` - A message in JSON format or an error if the request fails.
+#[ utoipa::path(
+    put,
+    path = "/manual_update/{subject_id}",
+    operation_id = "Manual Update Subject",
+    tag = "Update",
+    params(
+        ("subject_id" = String, Path, description = "Approval's unique id"),
+    ),
+    responses(
+        (status = 200, description = "Subject Data successfully retrieved", body = [String]),
+        (status = 400, description = "Bad Request"),
+        (status = 500, description = "Internal Server Error"),
+    )
+)]
+async fn manual_update(
+    Extension(bridge): Extension<Arc<Bridge>>,
+    Path(subject_id): Path<String>,
+) -> Result<Json<String>, Error> {
+    match bridge.manual_update(subject_id).await {
+        Ok(response) => Ok(Json(response)),
+        Err(e) => Err(Error::Kore(e.to_string())),
+    }
+}
 /// Get all gov
 ///
 /// Gets all the governorships to which the node belongs
@@ -949,6 +984,7 @@ pub fn build_routes(bridge: Bridge) -> Router {
         .route("/register-subjects/{governance_id}", get(get_all_subjects))
         .route("/register-governances", get(get_all_govs))
         .route("/update/{subject_id}", post(update_subject))
+        .route("/manual_update/{subject_id}", post(manual_update))
         .route("/auth/{subject_id}", delete(delete_auth_subject))
         .route("/auth/{subject_id}", get(get_witnesses_subject))
         .route("/auth", get(get_all_auth_subjects))
@@ -969,4 +1005,4 @@ pub fn build_routes(bridge: Bridge) -> Router {
             Router::new().merge(routes)
         }
     }
-
+    
