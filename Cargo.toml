@@ -20,7 +20,7 @@ axum-extra = "0.10.0"
 tower = "0.5.2"
 tower-http = {version = "0.6.2", features = ["trace", "metrics", "cors"]}
 utoipa = { version = "5.3.1", features = ["axum_extras"]}
-utoipa-rapidoc = { version = "5.0.1", features = ["axum"]}
+utoipa-rapidoc = { version = "6.0.0", features = ["axum"]}
 
 [features]
 default = []

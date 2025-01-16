@@ -36,6 +36,7 @@ use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestIn
         get_witnesses_subject,
         delete_auth_subject,
         update_subject,
+        manual_update,
         get_all_govs,
         get_all_subjects,
         get_events,
