@@ -1,13 +1,13 @@
 [package]
 name = "kore-http"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 [dependencies]
 kore-bridge = { path = "../kore/kore-bridge" }
 
 tokio = { version = "1.43.0", features = ["full"] }
-config = { version = "0.15.4", features = ["json", "toml", "yaml"]}
+config = { version = "0.15.6", features = ["json", "toml", "yaml"]}
 serde_json = {version = "1.0.133"}
 serde = {version = "1.0.215"}
 tracing = "0.1.41"

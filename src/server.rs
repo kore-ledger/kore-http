@@ -62,7 +62,7 @@ use utoipa_rapidoc::RapiDoc;
     post,
     path = "/event-request",
     operation_id = "Send Event Request",
-    tag = "Requests",
+    tag = "Request",
     request_body(content = String, content_type = "application/json", description = "The signed event request"),
     responses(
         
@@ -104,7 +104,7 @@ async fn send_event_request(
     get,
     path = "/event-request/{request-id}",
     operation_id = "Get Request State",
-    tag = "Requests",
+    tag = "Request",
     params(
         ("request-id" = String, Path, description = "Event Request's unique id"),
     ),
@@ -148,7 +148,7 @@ async fn get_request_state(
     get,
     path = "/approval-request/{subject_id}",
     operation_id = "Get one Approval Request Data",
-    tag = "Approvals",
+    tag = "Approval",
     params(
         ("subject_id" = String, Path, description = "subject unique id"),
     ),
@@ -186,7 +186,7 @@ async fn get_approval(
     patch,
     path = "/approval-request/{subject_id}",
     operation_id = "Set your Aprroval for a request",
-    tag = "Approvals",
+    tag = "Approval",
     request_body(content = String, content_type = "application/json", description = "Vote of the user for an existing request"),
     params(
         ("subject_id" = String, Path, description = "Approval's unique id"),
@@ -213,7 +213,7 @@ async fn patch_approval(
     }
 }
 
-/// put authorization
+/// Put authorization
 ///
 /// Given a subject identifier and one or more witnesses, the witnesses authorize the subject to send them copy of the logs
 ///
@@ -381,7 +381,7 @@ async fn delete_auth_subject(
 ///
 /// * `Result<Json<String>, Error>` - A message in JSON format or an error if the request fails.
 #[ utoipa::path(
-    put,
+    post,
     path = "/update/{subject_id}",
     operation_id = "Update Subject",
     tag = "Update",
@@ -417,8 +417,8 @@ async fn update_subject(
 ///
 /// * `Result<Json<String>, Error>` - A message in JSON format or an error if the request fails.
 #[ utoipa::path(
-    put,
-    path = "/manual_update/{subject_id}",
+    post,
+    path = "/manual-distribution/{subject_id}",
     operation_id = "Manual Update Subject",
     tag = "Update",
     params(
@@ -430,11 +430,11 @@ async fn update_subject(
         (status = 500, description = "Internal Server Error"),
     )
 )]
-async fn manual_update(
+async fn manual_distribution(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(subject_id): Path<String>,
 ) -> Result<Json<String>, Error> {
-    match bridge.manual_update(subject_id).await {
+    match bridge.manual_distribution(subject_id).await {
         Ok(response) => Ok(Json(response)),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
@@ -455,7 +455,7 @@ async fn manual_update(
     get,
     path = "/register-governances",
     operation_id = "Get All Governances",
-    tag = "Governances",
+    tag = "Governance",
     params(
         ("parameters" = GovQuery, Query, description = "The query parameters for the request"),
     ),
@@ -505,7 +505,7 @@ async fn get_all_govs(
     get,
     path = "/register-subjects/{governance_id}",
     operation_id = "Get All Subjects Data",
-    tag = "Subjects",
+    tag = "Subject",
     params(
         ("subject_id" = String, Path, description = "Approval's unique id"),
         ("parameters" = SubjectQuery, Query, description = "The query parameters for the request"),
@@ -548,7 +548,7 @@ async fn get_all_subjects(
     get,
     path = "/events/{subject_id}",
     operation_id = "Get Subject Events",
-    tag = "Events",
+    tag = "Event",
     params(
         ("subject_id" = String, Path, description = "Approval's unique id"),
         ("parameters" = EventsQuery, Query, description = "The query parameters for the request"),
@@ -615,7 +615,7 @@ async fn get_events(
     get,
     path = "/state/{subject_id}",
     operation_id = "Get Subject State",
-    tag = "States",
+    tag = "State",
     params(
         ("subject-id" = String, Path, description = "Subject's unique id"),
     ),
@@ -743,7 +743,7 @@ async fn get_state(
     get,
     path = "/signatures/{subject_id}",
     operation_id = "Get Subject Signatures",
-    tag = "Signatures",
+    tag = "Signature",
     params(
         ("subject-id" = String, Path, description = "Subject's unique id"),
     ),
@@ -798,7 +798,7 @@ async fn get_signatures(
     get,
     path = "/controller-id",
     operation_id = "Get controller-id",
-    tag = "Controller-id",
+    tag = "Other",
     responses(
         (status = 200, description = "Gets the controller id of the node",  body = String,
         example = json!(
@@ -825,7 +825,7 @@ async fn get_controller_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<St
     get,
     path = "/peer-id",
     operation_id = "Get peer-id",
-    tag = "Peer-id",
+    tag = "Other",
     responses(
         (status = 200, description = "Gets the peer id of the node",  body = String,
         example = json!(
@@ -854,7 +854,7 @@ async fn get_peer_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<String> 
     get,
     path = "/event/{subject_id}",
     operation_id = "Get Subject Events with sn",
-    tag = "Events",
+    tag = "Event",
     params(
         ("subject_id" = String, Path, description = "Approval's unique id"),
         ("parameters" = EventSnQuery, Query, description = "The query parameters for the request"),
@@ -922,7 +922,7 @@ async fn get_event_sn(
     get,
     path = "/events-first-last/{subject_id}",
     operation_id = "Get specifics Subject Events",
-    tag = "Events",
+    tag = "Event",
     params(
         ("subject_id" = String, Path, description = "Approval's unique id"),
         ("parameters" = EventFirstLastQuery, Query, description = "The query parameters for the request"),
@@ -984,7 +984,7 @@ pub fn build_routes(bridge: Bridge) -> Router {
         .route("/register-subjects/{governance_id}", get(get_all_subjects))
         .route("/register-governances", get(get_all_govs))
         .route("/update/{subject_id}", post(update_subject))
-        .route("/manual_update/{subject_id}", post(manual_update))
+        .route("/manual-distribution/{subject_id}", post(manual_distribution))
         .route("/auth/{subject_id}", delete(delete_auth_subject))
         .route("/auth/{subject_id}", get(get_witnesses_subject))
         .route("/auth", get(get_all_auth_subjects))

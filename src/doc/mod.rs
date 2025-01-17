@@ -36,7 +36,7 @@ use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestIn
         get_witnesses_subject,
         delete_auth_subject,
         update_subject,
-        manual_update,
+        manual_distribution,
         get_all_govs,
         get_all_subjects,
         get_events,
@@ -83,13 +83,13 @@ use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestIn
     tags(
         (name = "Auth", description = "Endpoints related to authorization."),
         (name = "Update", description = "Endpoints related to Update."),
-        (name = "Governances", description = "Endpoints related to Governances."),
-        (name = "States", description = "Endpoints related to States."),
-        (name = "Events", description = "Endpoints related to Events."),
-        (name = "Approvals", description = "Endpoints related to request approvals."),
-        (name = "Requests", description = "Endpoints for managing event requests."),
-        (name = "Subjects", description = "Endpoints for managing subjects and their data."),
-        (name = "Others", description = "Miscellaneous endpoints for node identification and configuration."),
+        (name = "Governance", description = "Endpoints related to Governances."),
+        (name = "State", description = "Endpoints related to States."),
+        (name = "Event", description = "Endpoints related to Events."),
+        (name = "Approval", description = "Endpoints related to request approvals."),
+        (name = "Request", description = "Endpoints for managing event requests."),
+        (name = "Subject", description = "Endpoints for managing subjects and their data."),
+        (name = "Other", description = "Miscellaneous endpoints for node identification and configuration."),
     )
 )]
 pub struct ApiDoc;
