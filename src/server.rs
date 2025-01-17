@@ -404,9 +404,9 @@ async fn update_subject(
     }
 }
 
-/// Manual Update Subject
+/// Manual Update
 ///
-/// Manual update an subject given its identifier
+/// Throw to witnesses the last distribution of a subject
 ///
 /// # Parameters
 ///

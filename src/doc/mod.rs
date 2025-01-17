@@ -15,7 +15,7 @@ use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestIn
     info(
         title = "Kore HTTP",
         description = "This API provides interaction with Kore Ledger nodes using the HTTP protocol. It allows sending and retrieving various types of requests and managing subjects. The API is documented with OpenAPI for easy integration and use.",
-        version = "0.1.0",
+        version = "0.3.0",
         contact(
             name = "Kore Information",
             url = "https://www.kore-ledger.net/",
