@@ -5,7 +5,7 @@ use kore_bridge::{
     FactInfo as FactInfoBridge, GovsData as GovsDataBridge, RegisterData as RegisterDataBridge,
     RequestData as RequestDataBridge, RequestInfo as RequestInfoBridge,
     SignatureInfo as SignatureInfoBridge, SignaturesInfo as SignaturesInfoBridge,
-    SignedInfo as SignedInfoBridge, SubjectInfo as SubjectInfoBridge, ProtocolsSignaturesInfo as ProtocolsSignaturesInfoBridge, TimeOutResponseInfo as TimeOutResponseInfoBridge, PaginatorEvents as PaginatorEventsBridge, EventInfo as EventInfoBridge, Paginator as PaginatorBridge, ProtocolsError as ProtocolsErrorBridge, Namespace as NamespaceBridge, FactRequestInfo as FactRequestInfoBridge, EOLRequestInfo as EOLRequestInfoBridge, ConfirmRequestInfo as ConfirmRequestInfoBridge, TransferRequestInfo as TransferRequestInfoBridge, CreateRequestInfo as CreateRequestInfoBridge, EventRequestInfo as EventRequestInfoBridge
+    SignedInfo as SignedInfoBridge, SubjectInfo as SubjectInfoBridge, ProtocolsSignaturesInfo as ProtocolsSignaturesInfoBridge, TimeOutResponseInfo as TimeOutResponseInfoBridge, PaginatorEvents as PaginatorEventsBridge, EventInfo as EventInfoBridge, Paginator as PaginatorBridge, ProtocolsError as ProtocolsErrorBridge, Namespace as NamespaceBridge, FactRequestInfo as FactRequestInfoBridge, EOLRequestInfo as EOLRequestInfoBridge, ConfirmRequestInfo as ConfirmRequestInfoBridge, TransferRequestInfo as TransferRequestInfoBridge, CreateRequestInfo as CreateRequestInfoBridge, RejectRequestInfo as RejectRequestInfoBridge ,EventRequestInfo as EventRequestInfoBridge
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -76,6 +76,7 @@ pub enum EventRequestInfo {
     Fact(FactRequestInfo),
     Transfer(TransferRequestInfo),
     Confirm(ConfirmRequestInfo),
+    Reject(RejectRequestInfo),
     EOL(EOLRequestInfo),
 }
 
@@ -86,6 +87,7 @@ impl From<EventRequestInfoBridge> for EventRequestInfo {
             EventRequestInfoBridge::Fact(fact_request_info) => Self::Fact(FactRequestInfo::from(fact_request_info)),
             EventRequestInfoBridge::Transfer(transfer_request_info) => Self::Transfer(TransferRequestInfo::from(transfer_request_info)),
             EventRequestInfoBridge::Confirm(confirm_request_info) => Self::Confirm(ConfirmRequestInfo::from(confirm_request_info)),
+            EventRequestInfoBridge::Reject(reject_request_info) => Self::Reject(RejectRequestInfo::from(reject_request_info)),
             EventRequestInfoBridge::EOL(eolrequest_info) => Self::EOL(EOLRequestInfo::from(eolrequest_info)),
         }
     }
@@ -119,10 +121,21 @@ impl From<TransferRequestInfoBridge> for TransferRequestInfo {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ConfirmRequestInfo {
     pub subject_id: String,
-}
+    pub name_old_owner: Option<String>,}
 
 impl From<ConfirmRequestInfoBridge> for ConfirmRequestInfo {
     fn from(value: ConfirmRequestInfoBridge) -> Self {
+        Self { subject_id: value.subject_id, name_old_owner: value.name_old_owner }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RejectRequestInfo {
+    pub subject_id: String,
+}
+
+impl From<RejectRequestInfoBridge> for RejectRequestInfo {
+    fn from(value: RejectRequestInfoBridge) -> Self {
         Self { subject_id: value.subject_id }
     }
 }

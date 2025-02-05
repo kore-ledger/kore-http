@@ -1,5 +1,5 @@
 use utoipa::OpenApi;
-use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestInfo, CreateRequestInfo, EOLRequestInfo, EventInfo, EventRequestInfo, FactInfo, FactRequestInfo, GovsData, Namespace, Paginator, PaginatorEvents, ProtocolsError, ProtocolsSignaturesInfo, RegisterData, RequestData, RequestInfo, SignatureInfo, SignaturesInfo, SignedInfo, SubjectInfo, TimeOutResponseInfo, TransferRequestInfo}};
+use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestInfo, CreateRequestInfo, EOLRequestInfo, EventInfo, EventRequestInfo, FactInfo, FactRequestInfo, GovsData, Namespace, Paginator, PaginatorEvents, ProtocolsError, ProtocolsSignaturesInfo, RegisterData, RejectRequestInfo, RequestData, RequestInfo, SignatureInfo, SignaturesInfo, SignedInfo, SubjectInfo, TimeOutResponseInfo, TransferRequestInfo}};
 /// Kore HTTP
 ///
 /// This API provides interaction with Kore Ledger nodes using the HTTP protocol.
@@ -45,7 +45,8 @@ use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestIn
         get_controller_id,
         get_peer_id,
         get_first_or_end_events,
-        get_event_sn
+        get_event_sn,
+        check_transfer
     ),
     components(
         schemas(
@@ -62,6 +63,7 @@ use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestIn
             CreateRequestInfo,
             TransferRequestInfo,
             ConfirmRequestInfo,
+            RejectRequestInfo,
             EOLRequestInfo,
             FactRequestInfo,
             Namespace,

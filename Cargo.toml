@@ -1,19 +1,19 @@
 [package]
 name = "kore-http"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 
 [dependencies]
 kore-bridge = { path = "../kore/kore-bridge" }
 
 tokio = { version = "1.43.0", features = ["full"] }
-config = { version = "0.15.6", features = ["json", "toml", "yaml"]}
+config = { version = "0.15.7", features = ["json", "toml", "yaml"]}
 serde_json = {version = "1.0.133"}
 serde = {version = "1.0.215"}
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
-rustls = { version = "0.23.21", features = ["ring"] }
+rustls = { version = "0.23.22", features = ["ring"] }
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
 axum = { version = "0.8.1" }
 axum-extra = "0.10.0"
