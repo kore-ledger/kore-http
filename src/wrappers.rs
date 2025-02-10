@@ -1,11 +1,7 @@
 use std::collections::HashSet;
 
 use kore_bridge::{
-    ApprovalReqInfo as ApprovalReqInfoBridge, ApproveInfo as ApproveInfoBridge,
-    FactInfo as FactInfoBridge, GovsData as GovsDataBridge, RegisterData as RegisterDataBridge,
-    RequestData as RequestDataBridge, RequestInfo as RequestInfoBridge,
-    SignatureInfo as SignatureInfoBridge, SignaturesInfo as SignaturesInfoBridge,
-    SignedInfo as SignedInfoBridge, SubjectInfo as SubjectInfoBridge, ProtocolsSignaturesInfo as ProtocolsSignaturesInfoBridge, TimeOutResponseInfo as TimeOutResponseInfoBridge, PaginatorEvents as PaginatorEventsBridge, EventInfo as EventInfoBridge, Paginator as PaginatorBridge, ProtocolsError as ProtocolsErrorBridge, Namespace as NamespaceBridge, FactRequestInfo as FactRequestInfoBridge, EOLRequestInfo as EOLRequestInfoBridge, ConfirmRequestInfo as ConfirmRequestInfoBridge, TransferRequestInfo as TransferRequestInfoBridge, CreateRequestInfo as CreateRequestInfoBridge, RejectRequestInfo as RejectRequestInfoBridge ,EventRequestInfo as EventRequestInfoBridge
+    ApprovalReqInfo as ApprovalReqInfoBridge, ApproveInfo as ApproveInfoBridge, ConfirmRequestInfo as ConfirmRequestInfoBridge, CreateRequestInfo as CreateRequestInfoBridge, EOLRequestInfo as EOLRequestInfoBridge, EventInfo as EventInfoBridge, EventRequestInfo as EventRequestInfoBridge, FactInfo as FactInfoBridge, FactRequestInfo as FactRequestInfoBridge, GovsData as GovsDataBridge, Namespace as NamespaceBridge, Paginator as PaginatorBridge, PaginatorEvents as PaginatorEventsBridge, ProtocolsError as ProtocolsErrorBridge, ProtocolsSignaturesInfo as ProtocolsSignaturesInfoBridge, RegisterData as RegisterDataBridge, RejectRequestInfo as RejectRequestInfoBridge, RequestData as RequestDataBridge, RequestInfo as RequestInfoBridge, SignatureInfo as SignatureInfoBridge, SignaturesInfo as SignaturesInfoBridge, SignedInfo as SignedInfoBridge, SubjectInfo as SubjectInfoBridge, TimeOutResponseInfo as TimeOutResponseInfoBridge, TransferRequestInfo as TransferRequestInfoBridge
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -367,6 +363,7 @@ pub struct SubjectInfo {
     pub active: bool,
     pub sn: u64,
     pub properties: Value,
+    pub new_owner: Option<String>
 }
 
 impl From<SubjectInfoBridge> for SubjectInfo {
@@ -382,6 +379,7 @@ impl From<SubjectInfoBridge> for SubjectInfo {
             active: value.active,
             sn: value.sn,
             properties: value.properties,
+            new_owner: value.new_owner
         }
     }
 }

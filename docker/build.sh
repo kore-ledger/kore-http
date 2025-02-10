@@ -2,7 +2,7 @@
 
 DOCKER_USERNAME="koreadmin"
 DOCKER_REPO="kore-http"
-TAG_ARRAY=("0.6.4-rockdb-prometheus")
+TAG_ARRAY=("0.6.5-rockdb-prometheus")
 DOCKERFILE_ARRAY=("./kore-http/docker/Dockerfile.rockdb")
 
 
@@ -16,12 +16,12 @@ DOCKERFILE_ARRAY=("./kore-http/docker/Dockerfile.rockdb")
     # Construir la imagen para AMD64
     echo ""
     echo "Construyendo la imagen para AMD64"
-    docker build --platform linux/amd64 -t ${DOCKER_USERNAME}/${DOCKER_REPO}:amd64-${TAG} --target amd64 -f $DOCKERFILE .
+    docker build --no-cache --platform linux/amd64 -t ${DOCKER_USERNAME}/${DOCKER_REPO}:amd64-${TAG} --target amd64 -f $DOCKERFILE .
 
     # Construir la imagen para ARM64
     echo ""
     echo "Construyendo la imagen para ARM64"
-    docker build --platform linux/arm64 -t ${DOCKER_USERNAME}/${DOCKER_REPO}:arm64-${TAG} --target arm64 -f $DOCKERFILE .
+    docker build --no-cache --platform linux/arm64 -t ${DOCKER_USERNAME}/${DOCKER_REPO}:arm64-${TAG} --target arm64 -f $DOCKERFILE .
 
     echo ""
     echo "Subiendo las imágenes a Docker Hub..."
