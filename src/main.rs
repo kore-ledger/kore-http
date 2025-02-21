@@ -58,7 +58,7 @@ async fn main() {
         .allow_headers([header::CONTENT_TYPE])
         .allow_origin(Any);
 
-    let config = build_config(args.env_config, &file_path);
+    let config = build_config(args.env_config, &file_path).unwrap();
     let bridge = Bridge::build(config, &password, None).await.unwrap();
     let token = bridge.token().clone();
 
