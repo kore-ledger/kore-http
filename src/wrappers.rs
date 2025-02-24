@@ -1,7 +1,12 @@
 use std::collections::HashSet;
-
 use kore_bridge::{
-    ApprovalReqInfo as ApprovalReqInfoBridge, ApproveInfo as ApproveInfoBridge, ConfirmRequestInfo as ConfirmRequestInfoBridge, CreateRequestInfo as CreateRequestInfoBridge, EOLRequestInfo as EOLRequestInfoBridge, EventInfo as EventInfoBridge, EventRequestInfo as EventRequestInfoBridge, FactInfo as FactInfoBridge, FactRequestInfo as FactRequestInfoBridge, GovsData as GovsDataBridge, Namespace as NamespaceBridge, Paginator as PaginatorBridge, PaginatorEvents as PaginatorEventsBridge, ProtocolsError as ProtocolsErrorBridge, ProtocolsSignaturesInfo as ProtocolsSignaturesInfoBridge, RegisterData as RegisterDataBridge, RejectRequestInfo as RejectRequestInfoBridge, RequestData as RequestDataBridge, RequestInfo as RequestInfoBridge, SignatureInfo as SignatureInfoBridge, SignaturesInfo as SignaturesInfoBridge, SignedInfo as SignedInfoBridge, SubjectInfo as SubjectInfoBridge, TimeOutResponseInfo as TimeOutResponseInfoBridge, TransferRequestInfo as TransferRequestInfoBridge
+    RoutingNode as RoutingNodeBridge,
+    RoutingConfig as RoutingConfigBridge,
+    ControlListConfig as ControlListConfigBridge,
+    TellConfig as TellConfigBridge,
+    NetworkConfig as NetworkConfigBridge,
+    config::Config as ConfigBridge, KoreConfig as KoreConfigBridge,ApprovalReqInfo as ApprovalReqInfoBridge, ApproveInfo as ApproveInfoBridge, ConfirmRequestInfo as ConfirmRequestInfoBridge, CreateRequestInfo as CreateRequestInfoBridge, EOLRequestInfo as EOLRequestInfoBridge, EventInfo as EventInfoBridge, EventRequestInfo as EventRequestInfoBridge, FactInfo as FactInfoBridge, FactRequestInfo as FactRequestInfoBridge, GovsData as GovsDataBridge, Namespace as NamespaceBridge, Paginator as PaginatorBridge, PaginatorEvents as PaginatorEventsBridge, ProtocolsError as ProtocolsErrorBridge, ProtocolsSignaturesInfo as ProtocolsSignaturesInfoBridge, RegisterData as RegisterDataBridge, RejectRequestInfo as RejectRequestInfoBridge, RequestData as RequestDataBridge, RequestInfo as RequestInfoBridge, SignatureInfo as SignatureInfoBridge, SignaturesInfo as SignaturesInfoBridge, SignedInfo as SignedInfoBridge, SubjectInfo as SubjectInfoBridge, TimeOutResponseInfo as TimeOutResponseInfoBridge, TransferRequestInfo as TransferRequestInfoBridge,
+    
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -442,5 +447,175 @@ pub struct TimeOutResponseInfo {
 impl From<TimeOutResponseInfoBridge> for TimeOutResponseInfo {
     fn from(value: TimeOutResponseInfoBridge) -> Self {
        Self { who: value.who, re_trys: value.re_trys, timestamp: value.timestamp }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct Config {
+    pub kore_config: KoreConfig,
+    pub keys_path: String,
+    pub prometheus: String,
+}
+
+impl From<ConfigBridge> for Config {
+    fn from(value: ConfigBridge) -> Self {
+        Self {
+            kore_config: KoreConfig::from(value.kore_config),
+            keys_path: value.keys_path,
+            prometheus: value.prometheus,
+        }
+    }
+}
+#[derive(Clone, Debug, Deserialize,Serialize, ToSchema)]
+pub struct KoreConfig {
+    pub key_derivator: String,
+    pub digest_derivator: String,
+    pub kore_db: String,
+    pub external_db: String,
+    pub network: NetworkConfig,
+    pub contracts_dir: String,
+    pub always_accept: bool,
+    pub garbage_collector: u64,
+    pub sink: String,
+}
+
+impl From<KoreConfigBridge> for KoreConfig {
+    fn from(value: KoreConfigBridge) -> Self {
+        Self {
+            key_derivator: value.key_derivator.to_string(),
+            digest_derivator: value.digest_derivator.to_string(),
+            kore_db: value.kore_db.to_string(),
+            external_db: value.external_db.to_string(),
+            network: NetworkConfig::from(value.network),
+            contracts_dir: value.contracts_dir,
+            always_accept: value.always_accept,
+            garbage_collector: value.garbage_collector.as_secs(),
+            sink: value.sink,
+        }
+    }
+}
+
+
+#[derive(Clone, Debug, Deserialize,Serialize, ToSchema)]
+pub enum ExternalDbConfig {
+    Sqlite {
+        path: String,
+    },
+}
+
+#[derive(Clone, Debug, Deserialize,Serialize, ToSchema)]
+pub enum KoreDbConfig {
+    Rocksdb {
+        path: String,
+    },
+    Sqlite {
+        path: String,
+    },
+}
+
+
+#[derive(Debug, Clone, Deserialize,Serialize, ToSchema)]
+pub struct NetworkConfig {
+    pub user_agent: String,
+    pub node_type: String,
+    pub listen_addresses: Vec<String>,
+    pub external_addresses: Vec<String>,
+    pub tell: TellConfig,
+    pub routing: RoutingConfig,
+    pub port_reuse: bool,
+    pub control_list: ControlListConfig,
+}
+
+impl From<NetworkConfigBridge> for NetworkConfig {
+    fn from(value: NetworkConfigBridge) -> Self {
+        Self {
+            user_agent: value.user_agent,
+            node_type: value.node_type.to_string(),
+            listen_addresses: value.listen_addresses,
+            external_addresses: value.external_addresses,
+            tell: TellConfig::from(value.tell),
+            routing: RoutingConfig::from(value.routing),
+            port_reuse: value.port_reuse,
+            control_list: ControlListConfig::from(value.control_list),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
+pub struct ControlListConfig {
+    enable: bool,
+    allow_list: Vec<String>,
+    block_list: Vec<String>,
+    service_allow_list: Vec<String>,
+    service_block_list: Vec<String>,
+    interval_request: u64,
+}
+
+impl From<ControlListConfigBridge> for ControlListConfig {
+    fn from(value: ControlListConfigBridge) -> Self {
+        Self {
+            enable: value.get_enable(),
+            allow_list: value.get_allow_list(),
+            block_list: value.get_block_list(),
+            service_allow_list: value.get_service_allow_list(),
+            service_block_list: value.get_service_block_list(),
+            interval_request: value.get_interval_request().as_secs(),
+        }
+    }
+}
+#[derive(Debug, Clone, Deserialize,Serialize, ToSchema)]
+pub struct TellConfig {
+    pub message_timeout: u64,
+    pub max_concurrent_streams: usize,
+}
+
+impl From<TellConfigBridge> for TellConfig {
+    fn from(value: TellConfigBridge) -> Self {
+        Self {
+            message_timeout: value.message_timeout.as_secs(),
+            max_concurrent_streams: value.max_concurrent_streams,
+        }
+    }
+}
+#[derive(Clone, Debug, Deserialize,Serialize,ToSchema)]
+pub struct RoutingConfig {
+    boot_nodes: Vec<RoutingNode>,
+    dht_random_walk: bool,
+    pre_routing: bool,
+    discovery_only_if_under_num: u64,
+    allow_non_globals_in_dht: bool,
+    allow_private_ip: bool,
+    enable_mdns: bool,
+    kademlia_disjoint_query_paths: bool,
+    kademlia_replication_factor: Option<usize>,
+}
+
+impl From<RoutingConfigBridge> for RoutingConfig {
+    fn from(value: RoutingConfigBridge) -> Self {
+        Self {
+            boot_nodes: value.get_boot_nodes().iter().map(|x| RoutingNode::from(x.clone())).collect(),
+            dht_random_walk: value.get_dht_random_walk(),
+            pre_routing: value.get_pre_routing(),
+            discovery_only_if_under_num: value.get_discovery_limit(),
+            allow_non_globals_in_dht: value.get_allow_non_globals_in_dht(),
+            allow_private_ip: value.get_allow_private_ip(),
+            enable_mdns: value.get_mdns(),
+            kademlia_disjoint_query_paths: value.get_kademlia_disjoint_query_paths(),
+            kademlia_replication_factor:  value.get_kademlia_replication_factor().map(|nz| nz.get()),
+        }
+    }
+}
+#[derive(Clone, Debug, Deserialize,Serialize, ToSchema)]
+pub struct RoutingNode {
+    pub peer_id: String,
+    pub address: Vec<String>,
+}
+
+impl From<RoutingNodeBridge> for RoutingNode {
+    fn from(value: RoutingNodeBridge) -> Self {
+        Self {
+            peer_id: value.peer_id,
+            address: value.address,
+        }
     }
 }
