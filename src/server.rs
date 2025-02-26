@@ -1,15 +1,15 @@
-use std::sync::Arc;
+use std::{io::{Cursor, Write}, sync::Arc};
 
 use axum::{
-    extract::{Path, Query},
-    routing::{delete, get, patch, post, put},
-    Extension, Json, Router,
+    body::Body, extract::{Path, Query}, http::{header, StatusCode}, response::{IntoResponse, Response}, routing::{delete, get, patch, post, put}, Extension, Json, Router
 };
+use bytes::Bytes;
 use kore_bridge::{model::BridgeSignedEventRequest, Bridge};
 use serde::Deserialize;
 use tower::ServiceBuilder;
 use utoipa::ToSchema;
-use crate::{enviroment::build_doc, error::Error, wrappers::{ApproveInfo, EventInfo, GovsData, PaginatorEvents, RegisterData, RequestData, RequestInfo, SignaturesInfo, SubjectInfo}};
+use zip::{write::FileOptions, CompressionMethod, ZipWriter};
+use crate::{enviroment::build_doc, error::Error, wrappers::{ApproveInfo, EventInfo, GovsData, PaginatorEvents, RegisterData, RequestData, RequestInfo, SignaturesInfo, SubjectInfo, Config as ConfigKoreHttp}};
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct SubjectQuery {
@@ -873,6 +873,105 @@ async fn get_peer_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<String> 
     Json(bridge.peer_id())
 }
 
+/// Get config
+///
+/// Get the config of the node
+///
+/// # Parameters
+///
+/// * `Extension(bridge): Extension<Arc<Bridge>>` - The bridge extension wrapped in an `Arc`.
+///
+/// # Returns
+///
+/// * `Json<ConfigKoreHttp>` - Returns the config of the node in a Json
+#[ utoipa::path(
+    get,
+    path = "/config",
+    operation_id = "Get config",
+    tag = "Other",
+    responses(
+        (status = 200, description = "Gets the config of the node",  body = ConfigKoreHttp),
+    )
+)]
+async fn get_config(Extension(bridge): Extension<Arc<Bridge>>) -> Json<ConfigKoreHttp> {
+    Json(ConfigKoreHttp::from(bridge.config()))
+}
+
+/// Get keys
+///
+/// Gets private key of the node
+///
+/// # Parameters
+///
+/// * `Extension(bridge): Extension<Arc<Bridge>>` - The bridge extension wrapped in an `Arc`.
+///
+/// # Returns
+///
+/// * `Json<String>` - Returns the private key of the node in a Json
+#[ utoipa::path(
+    get,
+    path = "/keys",
+    operation_id = "Get private key",
+    tag = "Other",
+    responses(
+        (status = 200, description = "Gets the private key of the node",  body = String),
+    )
+)]
+async fn get_keys(Extension(bridge): Extension<Arc<Bridge>>) -> impl IntoResponse {
+    let keys_path = format!("{}/node_private.der", bridge.config().keys_path);
+
+    // Lee el archivo como bytes en lugar de String
+    let keys = match std::fs::read(&keys_path) {
+        Ok(k) => k,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Error reading keys: {}", e)
+            ).into_response();
+        }
+    };
+
+    let mut buf = Vec::new();
+    {
+        let mut zip = ZipWriter::new(Cursor::new(&mut buf));
+        let options: FileOptions<()> = FileOptions::default()
+            .compression_method(CompressionMethod::Deflated);
+
+        if let Err(e) = zip.start_file("private_key.der", options) {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Error creating zip file: {}", e)
+            ).into_response();
+        }
+
+        if let Err(e) = zip.write_all(&keys) {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Error writing keys to zip: {}", e)
+            ).into_response();
+        }
+
+        if let Err(e) = zip.finish() {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Error finishing zip: {}", e)
+            ).into_response();
+        }
+    }
+
+    let body = Bytes::from(buf);
+    let mut response = Response::new(Body::from(body));
+    *response.status_mut() = StatusCode::OK;
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        "application/zip".parse().unwrap(),
+    );
+    response.headers_mut().insert(
+        header::CONTENT_DISPOSITION,
+        "attachment; filename=\"keys.zip\"".parse().unwrap(),
+    );
+    response
+}
 /// Get events of a sn
 ///
 /// Allows obtaining specific events of a subject by its identifier and sn.
@@ -1032,6 +1131,8 @@ pub fn build_routes(bridge: Bridge) -> Router {
         .route("/event-request", post(send_event_request))
         .route("/controller-id", get(get_controller_id))
         .route("/peer-id", get(get_peer_id))
+        .route("/config", get(get_config))
+        .route("/keys", get(get_keys))
         .layer(ServiceBuilder::new().layer(Extension(bridge)));
 
         if build_doc() {
