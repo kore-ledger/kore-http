@@ -1,16 +1,44 @@
-use std::collections::HashSet;
 use kore_bridge::{
-    RoutingNode as RoutingNodeBridge,
-    RoutingConfig as RoutingConfigBridge,
-    ControlListConfig as ControlListConfigBridge,
-    TellConfig as TellConfigBridge,
-    NetworkConfig as NetworkConfigBridge,
-    config::Config as ConfigBridge, KoreConfig as KoreConfigBridge,ApprovalReqInfo as ApprovalReqInfoBridge, ApproveInfo as ApproveInfoBridge, ConfirmRequestInfo as ConfirmRequestInfoBridge, CreateRequestInfo as CreateRequestInfoBridge, EOLRequestInfo as EOLRequestInfoBridge, EventInfo as EventInfoBridge, EventRequestInfo as EventRequestInfoBridge, FactInfo as FactInfoBridge, FactRequestInfo as FactRequestInfoBridge, GovsData as GovsDataBridge, Namespace as NamespaceBridge, Paginator as PaginatorBridge, PaginatorEvents as PaginatorEventsBridge, ProtocolsError as ProtocolsErrorBridge, ProtocolsSignaturesInfo as ProtocolsSignaturesInfoBridge, RegisterData as RegisterDataBridge, RejectRequestInfo as RejectRequestInfoBridge, RequestData as RequestDataBridge, RequestInfo as RequestInfoBridge, SignatureInfo as SignatureInfoBridge, SignaturesInfo as SignaturesInfoBridge, SignedInfo as SignedInfoBridge, SubjectInfo as SubjectInfoBridge, TimeOutResponseInfo as TimeOutResponseInfoBridge, TransferRequestInfo as TransferRequestInfoBridge,
-    
+    config::Config as ConfigBridge, ApprovalReqInfo as ApprovalReqInfoBridge,
+    ApproveInfo as ApproveInfoBridge, ConfirmRequestInfo as ConfirmRequestInfoBridge,
+    ControlListConfig as ControlListConfigBridge, CreateRequestInfo as CreateRequestInfoBridge,
+    EOLRequestInfo as EOLRequestInfoBridge, EventInfo as EventInfoBridge,
+    EventRequestInfo as EventRequestInfoBridge, FactInfo as FactInfoBridge,
+    FactRequestInfo as FactRequestInfoBridge, GovsData as GovsDataBridge,
+    KoreConfig as KoreConfigBridge, Namespace as NamespaceBridge,
+    NetworkConfig as NetworkConfigBridge, Paginator as PaginatorBridge,
+    PaginatorEvents as PaginatorEventsBridge, ProtocolsError as ProtocolsErrorBridge,
+    ProtocolsSignaturesInfo as ProtocolsSignaturesInfoBridge, RegisterData as RegisterDataBridge,
+    RejectRequestInfo as RejectRequestInfoBridge, RequestData as RequestDataBridge,
+    RequestInfo as RequestInfoBridge, RoutingConfig as RoutingConfigBridge,
+    RoutingNode as RoutingNodeBridge, SignatureInfo as SignatureInfoBridge,
+    SignaturesInfo as SignaturesInfoBridge, SignedInfo as SignedInfoBridge,
+    SubjectInfo as SubjectInfoBridge, TellConfig as TellConfigBridge,
+    TimeOutResponseInfo as TimeOutResponseInfoBridge,
+    TransferRequestInfo as TransferRequestInfoBridge,
+    TransferSubject as TransferSubjectBridge,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashSet;
 use utoipa::ToSchema;
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TransferSubject {
+    pub subject_id: String,
+    pub new_owner: String,
+    pub actual_owner: String,
+}
+
+impl From<TransferSubjectBridge> for TransferSubject {
+    fn from(value: TransferSubjectBridge) -> Self {
+        Self {
+            actual_owner: value.actual_owner,
+            new_owner: value.new_owner,
+            subject_id: value.subject_id
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PaginatorEvents {
@@ -20,7 +48,14 @@ pub struct PaginatorEvents {
 
 impl From<PaginatorEventsBridge> for PaginatorEvents {
     fn from(value: PaginatorEventsBridge) -> Self {
-        Self { paginator: Paginator::from(value.paginator), events: value.events.iter().map(|x| EventInfo::from(x.clone())).collect() }
+        Self {
+            paginator: Paginator::from(value.paginator),
+            events: value
+                .events
+                .iter()
+                .map(|x| EventInfo::from(x.clone()))
+                .collect(),
+        }
     }
 }
 
@@ -36,13 +71,16 @@ pub struct EventInfo {
 
 impl From<EventInfoBridge> for EventInfo {
     fn from(value: EventInfoBridge) -> Self {
-        let error = if let Some(error) = value.error {
-            Some(ProtocolsError::from(error))
-        } else {
-            None
-        };
+        let error = value.error.map(ProtocolsError::from);
 
-        Self { subject_id: value.subject_id, sn: value.sn, patch: value.patch, error, event_req: EventRequestInfo::from(value.event_req), succes: value.succes }
+        Self {
+            subject_id: value.subject_id,
+            sn: value.sn,
+            patch: value.patch,
+            error,
+            event_req: EventRequestInfo::from(value.event_req),
+            succes: value.succes,
+        }
     }
 }
 
@@ -55,7 +93,11 @@ pub struct Paginator {
 
 impl From<PaginatorBridge> for Paginator {
     fn from(value: PaginatorBridge) -> Self {
-        Self { pages: value.pages, next: value.next, prev: value.prev }
+        Self {
+            pages: value.pages,
+            next: value.next,
+            prev: value.prev,
+        }
     }
 }
 
@@ -67,10 +109,14 @@ pub struct ProtocolsError {
 
 impl From<ProtocolsErrorBridge> for ProtocolsError {
     fn from(value: ProtocolsErrorBridge) -> Self {
-        Self { evaluation: value.evaluation, validation: value.validation }
+        Self {
+            evaluation: value.evaluation,
+            validation: value.validation,
+        }
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub enum EventRequestInfo {
     Create(CreateRequestInfo),
@@ -84,12 +130,24 @@ pub enum EventRequestInfo {
 impl From<EventRequestInfoBridge> for EventRequestInfo {
     fn from(value: EventRequestInfoBridge) -> Self {
         match value {
-            EventRequestInfoBridge::Create(create_request_info) => Self::Create(CreateRequestInfo::from(create_request_info)),
-            EventRequestInfoBridge::Fact(fact_request_info) => Self::Fact(FactRequestInfo::from(fact_request_info)),
-            EventRequestInfoBridge::Transfer(transfer_request_info) => Self::Transfer(TransferRequestInfo::from(transfer_request_info)),
-            EventRequestInfoBridge::Confirm(confirm_request_info) => Self::Confirm(ConfirmRequestInfo::from(confirm_request_info)),
-            EventRequestInfoBridge::Reject(reject_request_info) => Self::Reject(RejectRequestInfo::from(reject_request_info)),
-            EventRequestInfoBridge::EOL(eolrequest_info) => Self::EOL(EOLRequestInfo::from(eolrequest_info)),
+            EventRequestInfoBridge::Create(create_request_info) => {
+                Self::Create(CreateRequestInfo::from(create_request_info))
+            }
+            EventRequestInfoBridge::Fact(fact_request_info) => {
+                Self::Fact(FactRequestInfo::from(fact_request_info))
+            }
+            EventRequestInfoBridge::Transfer(transfer_request_info) => {
+                Self::Transfer(TransferRequestInfo::from(transfer_request_info))
+            }
+            EventRequestInfoBridge::Confirm(confirm_request_info) => {
+                Self::Confirm(ConfirmRequestInfo::from(confirm_request_info))
+            }
+            EventRequestInfoBridge::Reject(reject_request_info) => {
+                Self::Reject(RejectRequestInfo::from(reject_request_info))
+            }
+            EventRequestInfoBridge::EOL(eolrequest_info) => {
+                Self::EOL(EOLRequestInfo::from(eolrequest_info))
+            }
         }
     }
 }
@@ -103,7 +161,11 @@ pub struct CreateRequestInfo {
 
 impl From<CreateRequestInfoBridge> for CreateRequestInfo {
     fn from(value: CreateRequestInfoBridge) -> Self {
-        Self { governance_id: value.governance_id, schema_id: value.schema_id, namespace: Namespace::from(value.namespace) }
+        Self {
+            governance_id: value.governance_id,
+            schema_id: value.schema_id,
+            namespace: Namespace::from(value.namespace),
+        }
     }
 }
 
@@ -115,18 +177,25 @@ pub struct TransferRequestInfo {
 
 impl From<TransferRequestInfoBridge> for TransferRequestInfo {
     fn from(value: TransferRequestInfoBridge) -> Self {
-        Self { subject_id: value.subject_id, new_owner: value.new_owner }
+        Self {
+            subject_id: value.subject_id,
+            new_owner: value.new_owner,
+        }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ConfirmRequestInfo {
     pub subject_id: String,
-    pub name_old_owner: Option<String>,}
+    pub name_old_owner: Option<String>,
+}
 
 impl From<ConfirmRequestInfoBridge> for ConfirmRequestInfo {
     fn from(value: ConfirmRequestInfoBridge) -> Self {
-        Self { subject_id: value.subject_id, name_old_owner: value.name_old_owner }
+        Self {
+            subject_id: value.subject_id,
+            name_old_owner: value.name_old_owner,
+        }
     }
 }
 
@@ -137,7 +206,9 @@ pub struct RejectRequestInfo {
 
 impl From<RejectRequestInfoBridge> for RejectRequestInfo {
     fn from(value: RejectRequestInfoBridge) -> Self {
-        Self { subject_id: value.subject_id }
+        Self {
+            subject_id: value.subject_id,
+        }
     }
 }
 
@@ -148,7 +219,9 @@ pub struct EOLRequestInfo {
 
 impl From<EOLRequestInfoBridge> for EOLRequestInfo {
     fn from(value: EOLRequestInfoBridge) -> Self {
-        Self { subject_id: value.subject_id }
+        Self {
+            subject_id: value.subject_id,
+        }
     }
 }
 
@@ -160,7 +233,10 @@ pub struct FactRequestInfo {
 
 impl From<FactRequestInfoBridge> for FactRequestInfo {
     fn from(value: FactRequestInfoBridge) -> Self {
-        Self { subject_id: value.subject_id, payload: value.payload }
+        Self {
+            subject_id: value.subject_id,
+            payload: value.payload,
+        }
     }
 }
 
@@ -172,7 +248,6 @@ impl From<NamespaceBridge> for Namespace {
         Namespace::from(value.to_string())
     }
 }
-
 
 impl From<&str> for Namespace {
     fn from(str: &str) -> Self {
@@ -191,7 +266,6 @@ impl From<String> for Namespace {
         Namespace::from(str.as_str())
     }
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RequestData {
@@ -368,7 +442,7 @@ pub struct SubjectInfo {
     pub active: bool,
     pub sn: u64,
     pub properties: Value,
-    pub new_owner: Option<String>
+    pub new_owner: Option<String>,
 }
 
 impl From<SubjectInfoBridge> for SubjectInfo {
@@ -384,7 +458,7 @@ impl From<SubjectInfoBridge> for SubjectInfo {
             active: value.active,
             sn: value.sn,
             properties: value.properties,
-            new_owner: value.new_owner
+            new_owner: value.new_owner,
         }
     }
 }
@@ -400,17 +474,19 @@ pub struct SignaturesInfo {
 
 impl From<SignaturesInfoBridge> for SignaturesInfo {
     fn from(value: SignaturesInfoBridge) -> Self {
-        let signatures_eval = match value.signatures_eval {
-            Some(eval) => Some(eval.iter().map(|x| ProtocolsSignaturesInfo::from(x.clone())).collect()),
-            None => None,
-        };
+        let signatures_eval = value.signatures_eval.map(|eval| eval.iter()
+            .map(|x| ProtocolsSignaturesInfo::from(x.clone()))
+            .collect());
 
-        let signatures_appr = match value.signatures_appr {
-            Some(appr) => Some(appr.iter().map(|x| ProtocolsSignaturesInfo::from(x.clone())).collect()),
-            None => None,
-        };
+        let signatures_appr =value.signatures_appr.map(|appr| appr.iter()
+            .map(|x| ProtocolsSignaturesInfo::from(x.clone()))
+            .collect());
 
-        let signatures_vali = value.signatures_vali.iter().map(|x| ProtocolsSignaturesInfo::from(x.clone())).collect();
+        let signatures_vali = value
+            .signatures_vali
+            .iter()
+            .map(|x| ProtocolsSignaturesInfo::from(x.clone()))
+            .collect();
 
         Self {
             subject_id: value.subject_id,
@@ -424,15 +500,19 @@ impl From<SignaturesInfoBridge> for SignaturesInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq, Hash)]
 pub enum ProtocolsSignaturesInfo {
-    Signature( SignatureInfo ),
-    TimeOut( TimeOutResponseInfo ),
+    Signature(SignatureInfo),
+    TimeOut(TimeOutResponseInfo),
 }
 
 impl From<ProtocolsSignaturesInfoBridge> for ProtocolsSignaturesInfo {
     fn from(value: ProtocolsSignaturesInfoBridge) -> Self {
         match value {
-            ProtocolsSignaturesInfoBridge::Signature(signature_info) => Self::Signature(SignatureInfo::from(signature_info)),
-            ProtocolsSignaturesInfoBridge::TimeOut(time_out_response_info) => Self::TimeOut(TimeOutResponseInfo::from(time_out_response_info)),
+            ProtocolsSignaturesInfoBridge::Signature(signature_info) => {
+                Self::Signature(SignatureInfo::from(signature_info))
+            }
+            ProtocolsSignaturesInfoBridge::TimeOut(time_out_response_info) => {
+                Self::TimeOut(TimeOutResponseInfo::from(time_out_response_info))
+            }
         }
     }
 }
@@ -446,7 +526,11 @@ pub struct TimeOutResponseInfo {
 
 impl From<TimeOutResponseInfoBridge> for TimeOutResponseInfo {
     fn from(value: TimeOutResponseInfoBridge) -> Self {
-       Self { who: value.who, re_trys: value.re_trys, timestamp: value.timestamp }
+        Self {
+            who: value.who,
+            re_trys: value.re_trys,
+            timestamp: value.timestamp,
+        }
     }
 }
 
@@ -466,7 +550,7 @@ impl From<ConfigBridge> for Config {
         }
     }
 }
-#[derive(Clone, Debug, Deserialize,Serialize, ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct KoreConfig {
     pub key_derivator: String,
     pub digest_derivator: String,
@@ -495,26 +579,7 @@ impl From<KoreConfigBridge> for KoreConfig {
     }
 }
 
-
-#[derive(Clone, Debug, Deserialize,Serialize, ToSchema)]
-pub enum ExternalDbConfig {
-    Sqlite {
-        path: String,
-    },
-}
-
-#[derive(Clone, Debug, Deserialize,Serialize, ToSchema)]
-pub enum KoreDbConfig {
-    Rocksdb {
-        path: String,
-    },
-    Sqlite {
-        path: String,
-    },
-}
-
-
-#[derive(Debug, Clone, Deserialize,Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct NetworkConfig {
     pub user_agent: String,
     pub node_type: String,
@@ -563,7 +628,7 @@ impl From<ControlListConfigBridge> for ControlListConfig {
         }
     }
 }
-#[derive(Debug, Clone, Deserialize,Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct TellConfig {
     pub message_timeout: u64,
     pub max_concurrent_streams: usize,
@@ -577,7 +642,7 @@ impl From<TellConfigBridge> for TellConfig {
         }
     }
 }
-#[derive(Clone, Debug, Deserialize,Serialize,ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct RoutingConfig {
     boot_nodes: Vec<RoutingNode>,
     dht_random_walk: bool,
@@ -593,7 +658,11 @@ pub struct RoutingConfig {
 impl From<RoutingConfigBridge> for RoutingConfig {
     fn from(value: RoutingConfigBridge) -> Self {
         Self {
-            boot_nodes: value.get_boot_nodes().iter().map(|x| RoutingNode::from(x.clone())).collect(),
+            boot_nodes: value
+                .get_boot_nodes()
+                .iter()
+                .map(|x| RoutingNode::from(x.clone()))
+                .collect(),
             dht_random_walk: value.get_dht_random_walk(),
             pre_routing: value.get_pre_routing(),
             discovery_only_if_under_num: value.get_discovery_limit(),
@@ -601,11 +670,11 @@ impl From<RoutingConfigBridge> for RoutingConfig {
             allow_private_ip: value.get_allow_private_ip(),
             enable_mdns: value.get_mdns(),
             kademlia_disjoint_query_paths: value.get_kademlia_disjoint_query_paths(),
-            kademlia_replication_factor:  value.get_kademlia_replication_factor().map(|nz| nz.get()),
+            kademlia_replication_factor: value.get_kademlia_replication_factor().map(|nz| nz.get()),
         }
     }
 }
-#[derive(Clone, Debug, Deserialize,Serialize, ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct RoutingNode {
     pub peer_id: String,
     pub address: Vec<String>,

@@ -1,5 +1,5 @@
 use utoipa::OpenApi;
-use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestInfo, CreateRequestInfo, EOLRequestInfo, EventInfo, EventRequestInfo, FactInfo, FactRequestInfo, GovsData, Namespace, Paginator, PaginatorEvents, ProtocolsError, ProtocolsSignaturesInfo, RegisterData, RejectRequestInfo, RequestData, RequestInfo, SignatureInfo, SignaturesInfo, SignedInfo, SubjectInfo, TimeOutResponseInfo, TransferRequestInfo}};
+use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, Config, ConfirmRequestInfo, ControlListConfig, CreateRequestInfo, EOLRequestInfo, EventInfo, EventRequestInfo, FactInfo, FactRequestInfo, GovsData, KoreConfig, Namespace, NetworkConfig, Paginator, PaginatorEvents, ProtocolsError, ProtocolsSignaturesInfo, RegisterData, RejectRequestInfo, RequestData, RequestInfo, RoutingConfig, RoutingNode, SignatureInfo, SignaturesInfo, SignedInfo, SubjectInfo, TellConfig, TimeOutResponseInfo, TransferRequestInfo, TransferSubject}};
 /// Kore HTTP
 ///
 /// This API provides interaction with Kore Ledger nodes using the HTTP protocol.
@@ -46,7 +46,10 @@ use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestIn
         get_peer_id,
         get_first_or_end_events,
         get_event_sn,
-        check_transfer
+        check_transfer,
+        get_config,
+        get_keys,
+        get_pending_transfers
     ),
     components(
         schemas(
@@ -79,7 +82,15 @@ use crate::{server::*, wrappers::{ApprovalReqInfo, ApproveInfo, ConfirmRequestIn
             SubjectInfo,
             SignaturesInfo,
             ProtocolsSignaturesInfo,
-            TimeOutResponseInfo
+            TimeOutResponseInfo,
+            Config,
+            KoreConfig,
+            NetworkConfig,
+            TellConfig,
+            RoutingConfig,
+            ControlListConfig,
+            RoutingNode,
+            TransferSubject
         )
     ),
     tags(

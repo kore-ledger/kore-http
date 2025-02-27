@@ -9,7 +9,7 @@ use serde::Deserialize;
 use tower::ServiceBuilder;
 use utoipa::ToSchema;
 use zip::{write::FileOptions, CompressionMethod, ZipWriter};
-use crate::{enviroment::build_doc, error::Error, wrappers::{ApproveInfo, EventInfo, GovsData, PaginatorEvents, RegisterData, RequestData, RequestInfo, SignaturesInfo, SubjectInfo, Config as ConfigKoreHttp}};
+use crate::{enviroment::build_doc, error::Error, wrappers::{TransferSubject, ApproveInfo, EventInfo, GovsData, PaginatorEvents, RegisterData, RequestData, RequestInfo, SignaturesInfo, SubjectInfo, Config as ConfigKoreHttp}};
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct SubjectQuery {
@@ -1108,6 +1108,44 @@ async fn get_first_or_end_events(
     }
 }
 
+/// Get pending transfers of node
+///
+/// # Returns
+///
+/// * `Result<Json<Vec<TransferSubject>>, Error>` - A list of pending transfers in JSON format or an error if the request fails.
+#[utoipa::path(
+get,
+path = "/transfers",
+operation_id = "Get pending transfers",
+tag = "State",
+responses(
+    (status = 200, description = "Transfers pending to accept or reject", body = [TransferSubject],
+    example = json!(
+        [
+            {
+                "subject_id": "JWFHt_vWYF9mBGENP3AkAo3OEYMyId7M9n_sUubvBRVI",
+                "new_owner": "E8oP5rRi2T5g_Hr7-zVhRbHJ32nvGeBJqrsF7S3uN89Q",
+                "actual_owner": "EKHNpIpmzXI8fIzVUTsfUGMRsB_iGRDKZz4RrErcc4AU"
+            }
+        ]
+    )),
+    (status = 400, description = "Bad Request"),
+    (status = 404, description = "Not Found"),
+    (status = 500, description = "Internal Server Error"),
+)
+)]
+async fn get_pending_transfers(
+    Extension(bridge): Extension<Arc<Bridge>>
+) -> Result<Json<Vec<TransferSubject>>, Error> {
+    match bridge
+    .get_pending_transfers()
+    .await
+{
+    Ok(response) => Ok(Json(response.iter().map(|x| TransferSubject::from(x.clone())).collect())),
+    Err(e) => Err(Error::Kore(e.to_string())),
+}
+}
+
 pub fn build_routes(bridge: Bridge) -> Router {
     let bridge = Arc::new(bridge);
     let routes=Router::new()
@@ -1133,6 +1171,7 @@ pub fn build_routes(bridge: Bridge) -> Router {
         .route("/peer-id", get(get_peer_id))
         .route("/config", get(get_config))
         .route("/keys", get(get_keys))
+        .route("/pending-transfers", get(get_pending_transfers))
         .layer(ServiceBuilder::new().layer(Extension(bridge)));
 
         if build_doc() {
