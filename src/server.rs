@@ -1,15 +1,30 @@
-use std::{io::{Cursor, Write}, sync::Arc};
+use std::{
+    io::{Cursor, Write},
+    sync::Arc,
+};
 
+use crate::{
+    enviroment::build_doc,
+    error::Error,
+    wrappers::{
+        ApproveInfo, Config as ConfigKoreHttp, EventInfo, GovsData, PaginatorEvents, RegisterData,
+        RequestData, RequestInfo, SignaturesInfo, SubjectInfo, TransferSubject,
+    },
+};
 use axum::{
-    body::Body, extract::{Path, Query}, http::{header, StatusCode}, response::{IntoResponse, Response}, routing::{delete, get, patch, post, put}, Extension, Json, Router
+    Extension, Json, Router,
+    body::Body,
+    extract::{Path, Query},
+    http::{StatusCode, header},
+    response::{IntoResponse, Response},
+    routing::{delete, get, patch, post, put},
 };
 use bytes::Bytes;
-use kore_bridge::{model::BridgeSignedEventRequest, Bridge};
+use kore_bridge::{Bridge, model::BridgeSignedEventRequest};
 use serde::Deserialize;
 use tower::ServiceBuilder;
 use utoipa::ToSchema;
-use zip::{write::FileOptions, CompressionMethod, ZipWriter};
-use crate::{enviroment::build_doc, error::Error, wrappers::{TransferSubject, ApproveInfo, EventInfo, GovsData, PaginatorEvents, RegisterData, RequestData, RequestInfo, SignaturesInfo, SubjectInfo, Config as ConfigKoreHttp}};
+use zip::{CompressionMethod, ZipWriter, write::FileOptions};
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct SubjectQuery {
@@ -39,10 +54,9 @@ pub struct EventFirstLastQuery {
     success: Option<bool>,
 }
 
-use crate ::doc::ApiDoc;
+use crate::doc::ApiDoc;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
-
 
 /// Send event request
 ///
@@ -65,7 +79,6 @@ use utoipa_rapidoc::RapiDoc;
     tag = "Request",
     request_body(content = String, content_type = "application/json", description = "The signed event request"),
     responses(
-        
         (status = 200, description = "Request Created Successfully", body = RequestData,
         example = json!(
             {
@@ -178,7 +191,7 @@ async fn get_approval(
 /// * `Extension(bridge): Extension<Arc<bridge>>` - The bridge extension wrapped in an `Arc`.
 /// * `Path(subject_id): Path<String>` -The identifier of the subject as a path parameter.
 /// * `Json(response): Json<String>` - The response (approval or rejection) in JSON format
-/// 
+///
 /// # Returns
 ///
 /// * `Result<Json<String>, Error>` - The approval request in JSON format or an error if the request fails.
@@ -518,7 +531,9 @@ async fn get_all_govs(
     Query(parameters): Query<GovQuery>,
 ) -> Result<Json<Vec<GovsData>>, Error> {
     match bridge.get_all_govs(parameters.active).await {
-        Ok(response) => Ok(Json(response.iter().map(|x| GovsData::from(x.clone())).collect())),
+        Ok(response) => Ok(Json(
+            response.iter().map(|x| GovsData::from(x.clone())).collect(),
+        )),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -533,7 +548,7 @@ async fn get_all_govs(
 /// * `Extension(bridge): Extension<Arc<Bridge>>` - The bridge extension wrapped in an `Arc`.
 /// * `Path(governance_id): Path<String>` - The identifier of the governance as a path parameter.
 /// * `Query(parameters): Query<SubjectQuery>` - The query parameters for the request.
-/// 
+///
 /// # Returns
 ///
 /// * `Result<Json<Vec<RegisterData>>, Error>` - A list of subjects in JSON format or an error if the request fails.
@@ -562,7 +577,12 @@ async fn get_all_subjects(
         .get_all_subjs(governance_id, parameters.active, parameters.schema)
         .await
     {
-        Ok(response) => Ok(Json(response.iter().map(|x| RegisterData::from(x.clone())).collect())),
+        Ok(response) => Ok(Json(
+            response
+                .iter()
+                .map(|x| RegisterData::from(x.clone()))
+                .collect(),
+        )),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -926,46 +946,49 @@ async fn get_keys(Extension(bridge): Extension<Arc<Bridge>>) -> impl IntoRespons
         Err(e) => {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Error reading keys: {}", e)
-            ).into_response();
+                format!("Error reading keys: {}", e),
+            )
+                .into_response();
         }
     };
 
     let mut buf = Vec::new();
     {
         let mut zip = ZipWriter::new(Cursor::new(&mut buf));
-        let options: FileOptions<()> = FileOptions::default()
-            .compression_method(CompressionMethod::Deflated);
+        let options: FileOptions<()> =
+            FileOptions::default().compression_method(CompressionMethod::Deflated);
 
         if let Err(e) = zip.start_file("private_key.der", options) {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Error creating zip file: {}", e)
-            ).into_response();
+                format!("Error creating zip file: {}", e),
+            )
+                .into_response();
         }
 
         if let Err(e) = zip.write_all(&keys) {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Error writing keys to zip: {}", e)
-            ).into_response();
+                format!("Error writing keys to zip: {}", e),
+            )
+                .into_response();
         }
 
         if let Err(e) = zip.finish() {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Error finishing zip: {}", e)
-            ).into_response();
+                format!("Error finishing zip: {}", e),
+            )
+                .into_response();
         }
     }
 
     let body = Bytes::from(buf);
     let mut response = Response::new(Body::from(body));
     *response.status_mut() = StatusCode::OK;
-    response.headers_mut().insert(
-        header::CONTENT_TYPE,
-        "application/zip".parse().unwrap(),
-    );
+    response
+        .headers_mut()
+        .insert(header::CONTENT_TYPE, "application/zip".parse().unwrap());
     response.headers_mut().insert(
         header::CONTENT_DISPOSITION,
         "attachment; filename=\"keys.zip\"".parse().unwrap(),
@@ -1031,10 +1054,7 @@ async fn get_event_sn(
     Path(subject_id): Path<String>,
     Query(parameters): Query<EventSnQuery>,
 ) -> Result<Json<EventInfo>, Error> {
-    match bridge
-        .get_event_sn(subject_id, parameters.sn)
-        .await
-    {
+    match bridge.get_event_sn(subject_id, parameters.sn).await {
         Ok(response) => Ok(Json(EventInfo::from(response))),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
@@ -1100,10 +1120,20 @@ async fn get_first_or_end_events(
     Query(parameters): Query<EventFirstLastQuery>,
 ) -> Result<Json<Vec<EventInfo>>, Error> {
     match bridge
-        .get_first_or_end_events(subject_id, parameters.quantity, parameters.reverse, parameters.success)
+        .get_first_or_end_events(
+            subject_id,
+            parameters.quantity,
+            parameters.reverse,
+            parameters.success,
+        )
         .await
     {
-        Ok(response) => Ok(Json(response.iter().map(|x| EventInfo::from(x.clone())).collect())),
+        Ok(response) => Ok(Json(
+            response
+                .iter()
+                .map(|x| EventInfo::from(x.clone()))
+                .collect(),
+        )),
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
@@ -1135,30 +1165,38 @@ responses(
 )
 )]
 async fn get_pending_transfers(
-    Extension(bridge): Extension<Arc<Bridge>>
+    Extension(bridge): Extension<Arc<Bridge>>,
 ) -> Result<Json<Vec<TransferSubject>>, Error> {
-    match bridge
-    .get_pending_transfers()
-    .await
-{
-    Ok(response) => Ok(Json(response.iter().map(|x| TransferSubject::from(x.clone())).collect())),
-    Err(e) => Err(Error::Kore(e.to_string())),
-}
+    match bridge.get_pending_transfers().await {
+        Ok(response) => Ok(Json(
+            response
+                .iter()
+                .map(|x| TransferSubject::from(x.clone()))
+                .collect(),
+        )),
+        Err(e) => Err(Error::Kore(e.to_string())),
+    }
 }
 
 pub fn build_routes(bridge: Bridge) -> Router {
     let bridge = Arc::new(bridge);
-    let routes=Router::new()
+    let routes = Router::new()
         .route("/signatures/{subject_id}", get(get_signatures))
         .route("/state/{subject_id}", get(get_state))
         .route("/events/{subject_id}", get(get_events))
         .route("/event/{subject_id}", get(get_event_sn))
-        .route("/events-first-last/{subject_id}", get(get_first_or_end_events))
+        .route(
+            "/events-first-last/{subject_id}",
+            get(get_first_or_end_events),
+        )
         .route("/register-subjects/{governance_id}", get(get_all_subjects))
         .route("/register-governances", get(get_all_govs))
         .route("/update/{subject_id}", post(update_subject))
         .route("/check-transfer/{subject_id}", post(check_transfer))
-        .route("/manual-distribution/{subject_id}", post(manual_distribution))
+        .route(
+            "/manual-distribution/{subject_id}",
+            post(manual_distribution),
+        )
         .route("/auth/{subject_id}", delete(delete_auth_subject))
         .route("/auth/{subject_id}", get(get_witnesses_subject))
         .route("/auth", get(get_all_auth_subjects))
@@ -1174,11 +1212,11 @@ pub fn build_routes(bridge: Bridge) -> Router {
         .route("/pending-transfers", get(get_pending_transfers))
         .layer(ServiceBuilder::new().layer(Extension(bridge)));
 
-        if build_doc() {
-            Router::new().merge(routes).merge(
-                RapiDoc::with_openapi("/doc/koreapi.json", ApiDoc::openapi()).path("/doc"),
-            )
-        } else {
-            Router::new().merge(routes)
-        }
+    if build_doc() {
+        Router::new()
+            .merge(routes)
+            .merge(RapiDoc::with_openapi("/doc/koreapi.json", ApiDoc::openapi()).path("/doc"))
+    } else {
+        Router::new().merge(routes)
     }
+}

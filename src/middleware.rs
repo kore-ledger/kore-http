@@ -1,13 +1,13 @@
 use std::time::Duration;
 use tower_http::{classify::ServerErrorsFailureClass, trace::TraceLayer};
-use tracing::{debug, error, info_span, Span};
+use tracing::{Span, debug, error, info_span};
 
 use axum::{
+    Router,
     body::Bytes,
     extract::{MatchedPath, Request},
     http::HeaderMap,
     response::Response,
-    Router,
 };
 
 pub fn tower_trace(routes: Router) -> Router {

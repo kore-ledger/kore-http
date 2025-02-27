@@ -1,11 +1,10 @@
 use kore_bridge::{
-    config::Config as ConfigBridge, ApprovalReqInfo as ApprovalReqInfoBridge,
-    ApproveInfo as ApproveInfoBridge, ConfirmRequestInfo as ConfirmRequestInfoBridge,
-    ControlListConfig as ControlListConfigBridge, CreateRequestInfo as CreateRequestInfoBridge,
-    EOLRequestInfo as EOLRequestInfoBridge, EventInfo as EventInfoBridge,
-    EventRequestInfo as EventRequestInfoBridge, FactInfo as FactInfoBridge,
-    FactRequestInfo as FactRequestInfoBridge, GovsData as GovsDataBridge,
-    KoreConfig as KoreConfigBridge, Namespace as NamespaceBridge,
+    ApprovalReqInfo as ApprovalReqInfoBridge, ApproveInfo as ApproveInfoBridge,
+    ConfirmRequestInfo as ConfirmRequestInfoBridge, ControlListConfig as ControlListConfigBridge,
+    CreateRequestInfo as CreateRequestInfoBridge, EOLRequestInfo as EOLRequestInfoBridge,
+    EventInfo as EventInfoBridge, EventRequestInfo as EventRequestInfoBridge,
+    FactInfo as FactInfoBridge, FactRequestInfo as FactRequestInfoBridge,
+    GovsData as GovsDataBridge, KoreConfig as KoreConfigBridge, Namespace as NamespaceBridge,
     NetworkConfig as NetworkConfigBridge, Paginator as PaginatorBridge,
     PaginatorEvents as PaginatorEventsBridge, ProtocolsError as ProtocolsErrorBridge,
     ProtocolsSignaturesInfo as ProtocolsSignaturesInfoBridge, RegisterData as RegisterDataBridge,
@@ -15,8 +14,8 @@ use kore_bridge::{
     SignaturesInfo as SignaturesInfoBridge, SignedInfo as SignedInfoBridge,
     SubjectInfo as SubjectInfoBridge, TellConfig as TellConfigBridge,
     TimeOutResponseInfo as TimeOutResponseInfoBridge,
-    TransferRequestInfo as TransferRequestInfoBridge,
-    TransferSubject as TransferSubjectBridge,
+    TransferRequestInfo as TransferRequestInfoBridge, TransferSubject as TransferSubjectBridge,
+    config::Config as ConfigBridge,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -35,7 +34,7 @@ impl From<TransferSubjectBridge> for TransferSubject {
         Self {
             actual_owner: value.actual_owner,
             new_owner: value.new_owner,
-            subject_id: value.subject_id
+            subject_id: value.subject_id,
         }
     }
 }
@@ -474,13 +473,17 @@ pub struct SignaturesInfo {
 
 impl From<SignaturesInfoBridge> for SignaturesInfo {
     fn from(value: SignaturesInfoBridge) -> Self {
-        let signatures_eval = value.signatures_eval.map(|eval| eval.iter()
-            .map(|x| ProtocolsSignaturesInfo::from(x.clone()))
-            .collect());
+        let signatures_eval = value.signatures_eval.map(|eval| {
+            eval.iter()
+                .map(|x| ProtocolsSignaturesInfo::from(x.clone()))
+                .collect()
+        });
 
-        let signatures_appr =value.signatures_appr.map(|appr| appr.iter()
-            .map(|x| ProtocolsSignaturesInfo::from(x.clone()))
-            .collect());
+        let signatures_appr = value.signatures_appr.map(|appr| {
+            appr.iter()
+                .map(|x| ProtocolsSignaturesInfo::from(x.clone()))
+                .collect()
+        });
 
         let signatures_vali = value
             .signatures_vali
