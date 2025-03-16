@@ -105,13 +105,15 @@ use utoipa::OpenApi;
     ),
     tags(
         (name = "Auth", description = "Endpoints related to authorization."),
+        (name = "Event", description = "Endpoints related to Events."),
         (name = "Update", description = "Endpoints related to Update."),
         (name = "Governance", description = "Endpoints related to Governances."),
+        (name = "Subject", description = "Endpoints for managing subjects and their data."),
         (name = "State", description = "Endpoints related to States."),
-        (name = "Event", description = "Endpoints related to Events."),
         (name = "Approval", description = "Endpoints related to request approvals."),
         (name = "Request", description = "Endpoints for managing event requests."),
-        (name = "Subject", description = "Endpoints for managing subjects and their data."),
+        (name = "Transfer", description = "Endpoints for managing transfers."),
+        (name = "Signature", description = "Endpoints for managing signatures."),
         (name = "Other", description = "Miscellaneous endpoints for node identification and configuration."),
     )
 )]

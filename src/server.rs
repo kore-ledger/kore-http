@@ -58,7 +58,7 @@ use crate::doc::ApiDoc;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
-/// Send event request
+/// Send Event Request
 ///
 /// Allows sending an event request for a subject to the Kore node.
 /// These requests can be of any type of event (fact, creation, transfer, or end of life).
@@ -86,8 +86,6 @@ use utoipa_rapidoc::RapiDoc;
                 "subject_id":"Jd_vA5Dl1epomG7wyeHiqgKdOIBi28vNgHjRl6hy1N5w"
             }
         )),
-        (status = 400, description = "Bad Request"),
-        (status = 409, description = "Conflict"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -101,7 +99,7 @@ async fn send_event_request(
     }
 }
 
-/// Get request state
+/// Request State
 ///
 /// Allows obtaining an event request by its identifier.
 ///
@@ -116,7 +114,7 @@ async fn send_event_request(
 #[utoipa::path(
     get,
     path = "/event-request/{request-id}",
-    operation_id = "Get Request State",
+    operation_id = "Request State",
     tag = "Request",
     params(
         ("request-id" = String, Path, description = "Event Request's unique id"),
@@ -130,8 +128,6 @@ async fn send_event_request(
                 "error": null
             }
         )),
-        (status = 400, description = "Bad Request"),
-        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -145,7 +141,7 @@ async fn get_request_state(
     }
 }
 
-/// Get approvals
+/// Approvals
 ///
 /// Allows obtaining the list of requests for approvals received by the node.
 ///
@@ -160,15 +156,13 @@ async fn get_request_state(
 #[utoipa::path(
     get,
     path = "/approval-request/{subject_id}",
-    operation_id = "Get one Approval Request Data",
+    operation_id = "One Approval Request Data",
     tag = "Approval",
     params(
         ("subject_id" = String, Path, description = "Subjects unique id"),
     ),
     responses(
         (status = 200, description = "Approval Data successfully retrieved", body = ApproveInfo),
-        (status = 400, description = "Bad Request"),
-        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -182,7 +176,7 @@ async fn get_approval(
     }
 }
 
-/// patch approval
+/// Approval
 ///
 /// Allows issuing an affirmative or negative approval for a previously received request.
 ///
@@ -198,7 +192,7 @@ async fn get_approval(
 #[ utoipa::path(
     patch,
     path = "/approval-request/{subject_id}",
-    operation_id = "Set your Aprroval for a request",
+    operation_id = "Set your Approval for a request",
     tag = "Approval",
     request_body(content = String, content_type = "application/json", description = "Vote of the user for an existing request"),
     params(
@@ -209,9 +203,6 @@ async fn get_approval(
         example = json!(
             "The approval request for subject Jd_vA5Dl1epomG7wyeHiqgKdOIBi28vNgHjRl6hy1N5w has changed to RespondedAccepted"
         )),
-        (status = 400, description = "Bad Request"),
-        (status = 404, description = "Not Found"),
-        (status = 409, description = "Conflict"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -226,7 +217,7 @@ async fn patch_approval(
     }
 }
 
-/// Put authorization
+/// Authorization
 ///
 /// Given a subject identifier and one or more witnesses, the witnesses authorize the subject to send them copy of the logs
 ///
@@ -242,7 +233,7 @@ async fn patch_approval(
 #[  utoipa::path(
     put,
     path = "/auth/{subject_id}",
-    operation_id = "Put Authorization",
+    operation_id = "Authorization",
     tag = "Auth",
     request_body(content = String, content_type = "application/json", description = "witnesses"),
     params(
@@ -253,9 +244,6 @@ async fn patch_approval(
         example = json!(
             "Ok"
         )),
-        (status = 400, description = "Bad Request"),
-        (status = 404, description = "Not Found"),
-        (status = 409, description = "Conflict"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -270,7 +258,7 @@ async fn put_auth(
     }
 }
 
-/// Get authorized subjects
+/// Authorized Subjects
 ///
 /// Allows obtaining the list of subjects that have been authorized by the node
 ///
@@ -284,7 +272,7 @@ async fn put_auth(
 #[ utoipa::path(
     get,
     path = "/auth",
-    operation_id = "Get authorized subjects",
+    operation_id = "Authorized subjects",
     tag = "Auth",
     responses(
         (status = 200, description = "A list of authorized subjects in JSON ", body = [String],
@@ -293,8 +281,7 @@ async fn put_auth(
                 "J6blziscpjD0pJXsRh6_ooPtBsvwEZhx-xO4hT7WoKg0"
             ]
         )),
-        (status = 400, description = "Bad Request"),
-        (status = 500, description = "Internal Server Error"),
+        (status = 500, description = "Internal Server Error", body = String),
     )
 )]
 async fn get_all_auth_subjects(
@@ -306,7 +293,7 @@ async fn get_all_auth_subjects(
     }
 }
 
-/// Get witnesses subject
+/// Witnesses Subject
 ///
 /// Obtains a subject's witnesses
 ///
@@ -321,15 +308,21 @@ async fn get_all_auth_subjects(
 #[ utoipa::path(
     get,
     path = "/auth/{subject_id}",
-    operation_id = "Get witnesses subject",
+    operation_id = "Witnesses Subject",
     tag = "Auth",
     params(
         ("subject_id" = String, Path, description = "Subjects unique id"),
     ),
     responses(
-        (status = 200, description = "a list of witness nodes in Json", body = [String]),
-        (status = 400, description = "Bad Request"),
-        (status = 500, description = "Internal Server Error"),
+        (status = 200, description = "A list of witness nodes in Json", body = [String],
+        example = json!(
+            [
+            "EehaWh_CuYvvvjr0dKUKRYMyCFJvDzumcLnUcUbIWwks"
+            ]
+        )),
+        (status = 500, description = "Internal Server Error", body = String,  example = json!(
+            "Api error: Can not get witnesses of subjects: Error: The subject has not been authorized"
+        )),
     )
 )]
 async fn get_witnesses_subject(
@@ -342,7 +335,7 @@ async fn get_witnesses_subject(
     }
 }
 
-/// Delete authorized subjects
+/// Authorized Subjects
 ///
 /// Deletes an authorized subject given its identifier
 ///
@@ -357,7 +350,7 @@ async fn get_witnesses_subject(
 #[ utoipa::path(
     delete,
     path = "/auth/{subject_id}",
-    operation_id = "Delete authorized subjects",
+    operation_id = "Authorized Subjects",
     tag = "Auth",
     params(
         ("subject_id" = String, Path, description = "Subjects unique id"),
@@ -367,7 +360,6 @@ async fn get_witnesses_subject(
         example = json!(
             "Ok"
         )),
-        (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -402,9 +394,13 @@ async fn delete_auth_subject(
         ("subject_id" = String, Path, description = "Subjects unique id"),
     ),
     responses(
-        (status = 200, description = "Subject Data successfully retrieved", body = String),
-        (status = 400, description = "Bad Request"),
-        (status = 500, description = "Internal Server Error"),
+        (status = 200, description = "Subject Data successfully retrieved", body = String,
+        example = json!(
+            "Update in progress"
+        )),
+        (status = 500, description = "Internal Server Error", body = String, example = json!(
+            "Api error: Can not update subject: Error: The subject has not been authorized"
+        )),
     )
 )]
 async fn update_subject(
@@ -431,15 +427,14 @@ async fn update_subject(
 /// * `Result<Json<String>, Error>` - A message in JSON format or an error if the request fails.
 #[ utoipa::path(
     post,
-    path = "/check_transfer/{subject_id}",
+    path = "/check-transfer/{subject_id}",
     operation_id = "Check transfer",
     tag = "Transfer",
     params(
-        ("subject_id" = String, Path, description = "Subjects unique id"),
+        ("subject_id" = String, Path, description =  "Subject unique id"),
     ),
     responses(
         (status = 200, description = "Subject Data successfully retrieved", body = String),
-        (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -453,7 +448,7 @@ async fn check_transfer(
     }
 }
 
-/// Manual Update
+/// Update Manual Distribution
 ///
 /// Throw to witnesses the last distribution of a subject
 ///
@@ -468,14 +463,17 @@ async fn check_transfer(
 #[ utoipa::path(
     post,
     path = "/manual-distribution/{subject_id}",
-    operation_id = "Manual Update Subject",
+    operation_id = "Update Manual Distribution",
     tag = "Update",
     params(
-        ("subject_id" = String, Path, description = "Subjects unique id"),
+        ("subject_id" = String, Path, description =  "Subject unique id"),
     ),
     responses(
-        (status = 200, description = "Subject Data successfully retrieved", body = String),
-        (status = 400, description = "Bad Request"),
+        (status = 200, description = "Subject Data successfully retrieved", body = String,
+        example = json!(
+            "Manual update in progress"
+        )
+        ),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -488,7 +486,8 @@ async fn manual_distribution(
         Err(e) => Err(Error::Kore(e.to_string())),
     }
 }
-/// Get all gov
+
+/// All Governances
 ///
 /// Gets all the governorships to which the node belongs
 ///
@@ -503,7 +502,7 @@ async fn manual_distribution(
 #[ utoipa::path(
     get,
     path = "/register-governances",
-    operation_id = "Get All Governances",
+    operation_id = "All Governances",
     tag = "Governance",
     params(
         ("parameters" = GovQuery, Query, description = "The query parameters for the request"),
@@ -522,7 +521,6 @@ async fn manual_distribution(
                 }
             ]
         )),
-        (status = 400, description = "Bad Request"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -538,7 +536,7 @@ async fn get_all_govs(
     }
 }
 
-/// Get all subjects
+/// All Subjects
 ///
 /// Allows obtaining the list of subjects known by the node with pagination.
 /// It can also be used to obtain only the governances and all subjects belonging to a specific governance.
@@ -555,16 +553,23 @@ async fn get_all_govs(
 #[  utoipa::path(
     get,
     path = "/register-subjects/{governance_id}",
-    operation_id = "Get All Subjects Data",
+    operation_id = "All Subjects",
     tag = "Subject",
     params(
-        ("subject_id" = String, Path, description = "Subjects unique id"),
+        ("subject_id" = String, Path, description =  "Subject unique id"),
         ("parameters" = SubjectQuery, Query, description = "The query parameters for the request"),
     ),
     responses(
-        (status = 200, description = "Subjects Data successfully retrieved", body = [RegisterData]),
-        (status = 400, description = "Bad Request"),
-        (status = 404, description = "Not Found"),
+        (status = 200, description = "Subjects Data successfully retrieved", body = [RegisterData],
+        example = json!(
+            [
+                {
+                    "subject_id": "JukqvNApVZMlEBI5DrZlZWEUgZs9vdEC6MEmmAQpwmns",
+                    "schema": "Test",
+                    "active": true
+                }
+            ]
+        )),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -587,7 +592,7 @@ async fn get_all_subjects(
     }
 }
 
-/// Get events of a subject
+/// Subject Events
 ///
 /// Allows obtaining specific events of a subject by its identifier.
 ///
@@ -603,10 +608,10 @@ async fn get_all_subjects(
 #[ utoipa::path(
     get,
     path = "/events/{subject_id}",
-    operation_id = "Get Subject Events",
+    operation_id = "Subject Events",
     tag = "Event",
     params(
-        ("subject_id" = String, Path, description = "Subjects unique id"),
+        ("subject_id" = String, Path, description =  "Subject unique id"),
         ("parameters" = EventsQuery, Query, description = "The query parameters for the request"),
     ),
     responses(
@@ -636,8 +641,6 @@ async fn get_all_subjects(
                 }
             }
         )),
-        (status = 400, description = "Bad Request"),
-        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -655,7 +658,7 @@ async fn get_events(
     }
 }
 
-/// Get state of a subject
+/// Subject State
 ///
 /// Allows obtaining specific state of a subject by its identifier.
 ///
@@ -670,10 +673,10 @@ async fn get_events(
 #[utoipa::path(
     get,
     path = "/state/{subject_id}",
-    operation_id = "Get Subject State",
+    operation_id = "Subject State",
     tag = "State",
     params(
-        ("subject-id" = String, Path, description = "Subject's unique id"),
+        ("subject_id" = String, Path, description =  "Subject unique id"),
     ),
     responses(
         (status = 200, description = "Allows obtaining specific state of a subject by its identifier.", body = [SubjectInfo],
@@ -768,8 +771,6 @@ async fn get_events(
                 "subject_id": "Jd_vA5Dl1epomG7wyeHiqgKdOIBi28vNgHjRl6hy1N5w"
             }
         )),
-        (status = 400, description = "Bad Request"),
-        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -783,7 +784,7 @@ async fn get_state(
     }
 }
 
-/// Get signatures of a subject
+/// Subject Signatures
 ///
 /// Allows obtaining signatures of the last event of subject.
 ///
@@ -798,13 +799,13 @@ async fn get_state(
 #[ utoipa::path(
     get,
     path = "/signatures/{subject_id}",
-    operation_id = "Get Subject Signatures",
+    operation_id = "Subject Signatures",
     tag = "Signature",
     params(
-        ("subject-id" = String, Path, description = "Subject's unique id"),
+        ("subject_id" = String, Path, description =  "Subject unique id"),
     ),
     responses(
-        (status = 200, description = "the signature in JSON format", body = [SignaturesInfo],
+        (status = 200, description = "the signature in JSON format", body = SignaturesInfo,
         example = json!(
             {
                 "signatures_appr": null,
@@ -823,8 +824,6 @@ async fn get_state(
                 "subject_id": "Jd_vA5Dl1epomG7wyeHiqgKdOIBi28vNgHjRl6hy1N5w"
             }
         )),
-        (status = 400, description = "Bad Request"),
-        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -838,7 +837,7 @@ async fn get_signatures(
     }
 }
 
-/// Get controller-id
+/// Controller-id
 ///
 /// Gets the controller id of the node
 ///
@@ -853,20 +852,21 @@ async fn get_signatures(
 #[ utoipa::path(
     get,
     path = "/controller-id",
-    operation_id = "Get controller-id",
+    operation_id = "Controller-id",
     tag = "Other",
     responses(
         (status = 200, description = "Gets the controller id of the node",  body = String,
         example = json!(
             "E2ZY7GjU14U3m-iAqvhQM6kiG62uqLdBMBwv4J-4tzwI"
         )),
+        (status = 500, description = "Internal Server Error"),
     )
 )]
 async fn get_controller_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<String> {
     Json(bridge.controller_id())
 }
 
-/// Get peer-id
+/// Peer-id
 ///
 /// Gets the peer id of the node
 ///
@@ -880,20 +880,21 @@ async fn get_controller_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<St
 #[ utoipa::path(
     get,
     path = "/peer-id",
-    operation_id = "Get peer-id",
+    operation_id = "Peer-id",
     tag = "Other",
     responses(
         (status = 200, description = "Gets the peer id of the node",  body = String,
         example = json!(
             "12D3KooWQTjWCGZa2f6ZVkwwcbEb4ghtS49AcssJSrATFBNxDpR7"
         )),
+        (status = 500, description = "Internal Server Error"),
     )
 )]
 async fn get_peer_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<String> {
     Json(bridge.peer_id())
 }
 
-/// Get config
+/// Config
 ///
 /// Get the config of the node
 ///
@@ -907,17 +908,68 @@ async fn get_peer_id(Extension(bridge): Extension<Arc<Bridge>>) -> Json<String> 
 #[ utoipa::path(
     get,
     path = "/config",
-    operation_id = "Get config",
+    operation_id = "Config",
     tag = "Other",
     responses(
-        (status = 200, description = "Gets the config of the node",  body = ConfigKoreHttp),
+        (status = 200, description = "Obtain config of node", body = ConfigKoreHttp,
+        example = json!(
+            {
+                "kore_config": {
+                    "key_derivator": "Ed25519",
+                    "digest_derivator": "Blake3_256",
+                    "kore_db": "Rocksdb",
+                    "external_db": "Sqlite",
+                    "network": {
+                        "user_agent": "kore-node",
+                        "node_type": "Bootstrap",
+                        "listen_addresses": [
+                            "/ip4/0.0.0.0/tcp/50000"
+                        ],
+                        "external_addresses": [
+                            "/ip4/172.28.0.102/tcp/50000"
+                        ],
+                        "tell": {
+                            "message_timeout": 10,
+                            "max_concurrent_streams": 100
+                        },
+                        "routing": {
+                            "boot_nodes": [],
+                            "dht_random_walk": false,
+                            "pre_routing": true,
+                            "discovery_only_if_under_num": 184467,
+                            "allow_non_globals_in_dht": false,
+                            "allow_private_ip": false,
+                            "enable_mdns": false,
+                            "kademlia_disjoint_query_paths": true,
+                            "kademlia_replication_factor": null
+                        },
+                        "port_reuse": false,
+                        "control_list": {
+                            "enable": false,
+                            "allow_list": [],
+                            "block_list": [],
+                            "service_allow_list": [],
+                            "service_block_list": [],
+                            "interval_request": 60
+                        }
+                    },
+                    "contracts_dir": "./",
+                    "always_accept": true,
+                    "garbage_collector": 100,
+                    "sink": ""
+                },
+                "keys_path": "keys",
+                "prometheus": "0.0.0.0:3050"
+            }
+        )),
+        (status = 500, description = "Internal Server Error"),
     )
 )]
 async fn get_config(Extension(bridge): Extension<Arc<Bridge>>) -> Json<ConfigKoreHttp> {
     Json(ConfigKoreHttp::from(bridge.config()))
 }
 
-/// Get keys
+/// keys
 ///
 /// Gets private key of the node
 ///
@@ -931,10 +983,11 @@ async fn get_config(Extension(bridge): Extension<Arc<Bridge>>) -> Json<ConfigKor
 #[ utoipa::path(
     get,
     path = "/keys",
-    operation_id = "Get private key",
+    operation_id = "Keys",
     tag = "Other",
     responses(
         (status = 200, description = "Gets the private key of the node",  body = String),
+        (status = 500, description = "Internal Server Error"),
     )
 )]
 async fn get_keys(Extension(bridge): Extension<Arc<Bridge>>) -> impl IntoResponse {
@@ -995,7 +1048,8 @@ async fn get_keys(Extension(bridge): Extension<Arc<Bridge>>) -> impl IntoRespons
     );
     response
 }
-/// Get events of a sn
+
+/// Subject Events with SN
 ///
 /// Allows obtaining specific events of a subject by its identifier and sn.
 ///
@@ -1011,10 +1065,10 @@ async fn get_keys(Extension(bridge): Extension<Arc<Bridge>>) -> impl IntoRespons
 #[utoipa::path(
     get,
     path = "/event/{subject_id}",
-    operation_id = "Get Subject Events with sn",
+    operation_id = "Subject Events with SN",
     tag = "Event",
     params(
-        ("subject_id" = String, Path, description = "Subjects unique id"),
+        ("subject_id" = String, Path, description =  "Subject unique id"),
         ("parameters" = EventSnQuery, Query, description = "The query parameters for the request"),
     ),
     responses(
@@ -1044,8 +1098,6 @@ async fn get_keys(Extension(bridge): Extension<Arc<Bridge>>) -> impl IntoRespons
                 }
             }
         )),
-        (status = 400, description = "Bad Request"),
-        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -1060,7 +1112,7 @@ async fn get_event_sn(
     }
 }
 
-/// Get first or last events of a subject
+/// First or End Events
 ///
 /// Given a subject id a specific number of events can be obtained, depending on the quantity, reverse and success parameters.
 ///
@@ -1076,41 +1128,37 @@ async fn get_event_sn(
 #[utoipa::path(
     get,
     path = "/events-first-last/{subject_id}",
-    operation_id = "Get specifics Subject Events",
+    operation_id = "First or End Events",
     tag = "Event",
     params(
-        ("subject_id" = String, Path, description =  "Subjects unique id"),
+        ("subject_id" = String, Path, description =  "Subject unique id"),
         ("parameters" = EventFirstLastQuery, Query, description = "The query parameters for the request"),
     ),
     responses(
         (status = 200, description = "Allows obtaining specific events of a subject by its identifier and sn", body = [EventInfo],
         example = json!(
+            [
             {
-                "events": [
-                    {
-                        "patch": "[]",
-                        "error": null,
-                        "event_req": {
-                            "Create": {
-                                "governance_id": "",
-                                "namespace": [],
-                                "schema_id": "governance"
-                            }
-                        },
-                        "sn": 0,
-                        "subject_id": "Jd_vA5Dl1epomG7wyeHiqgKdOIBi28vNgHjRl6hy1N5w",
-                        "succes": true
+                "subject_id": "JukqvNApVZMlEBI5DrZlZWEUgZs9vdEC6MEmmAQpwmns",
+                "sn": 0,
+                "patch": {
+                    "custom_types": {},
+                    "name": "",
+                    "unit_process": [],
+                    "version": 0
+                },
+                "error": null,
+                "event_req": {
+                    "Create": {
+                        "governance_id": "JecW6BjX8cG-hG4uv2L7nok1G8ABO_4cHhJiDG9qcgF0",
+                        "schema_id": "Test",
+                        "namespace": []
                     }
-                ],
-                "paginator": {
-                    "next": null,
-                    "pages": 1,
-                    "prev": null
-                }
-            }
+                },
+                "succes": true
+            },
+            ]
         )),
-        (status = 400, description = "Bad Request"),
-        (status = 404, description = "Not Found"),
         (status = 500, description = "Internal Server Error"),
     )
 )]
@@ -1138,16 +1186,16 @@ async fn get_first_or_end_events(
     }
 }
 
-/// Get pending transfers of node
+/// Pending Transfers
 ///
 /// # Returns
 ///
 /// * `Result<Json<Vec<TransferSubject>>, Error>` - A list of pending transfers in JSON format or an error if the request fails.
 #[utoipa::path(
 get,
-path = "/transfers",
-operation_id = "Get pending transfers",
-tag = "State",
+path = "/pending-transfers",
+operation_id = "Pending Transfers",
+tag = "Transfer",
 responses(
     (status = 200, description = "Transfers pending to accept or reject", body = [TransferSubject],
     example = json!(
@@ -1159,8 +1207,6 @@ responses(
             }
         ]
     )),
-    (status = 400, description = "Bad Request"),
-    (status = 404, description = "Not Found"),
     (status = 500, description = "Internal Server Error"),
 )
 )]
