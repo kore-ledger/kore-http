@@ -1,21 +1,5 @@
 use kore_bridge::{
-    ApprovalReqInfo as ApprovalReqInfoBridge, ApproveInfo as ApproveInfoBridge,
-    ConfirmRequestInfo as ConfirmRequestInfoBridge, ControlListConfig as ControlListConfigBridge,
-    CreateRequestInfo as CreateRequestInfoBridge, EOLRequestInfo as EOLRequestInfoBridge,
-    EventInfo as EventInfoBridge, EventRequestInfo as EventRequestInfoBridge,
-    FactInfo as FactInfoBridge, FactRequestInfo as FactRequestInfoBridge,
-    GovsData as GovsDataBridge, KoreConfig as KoreConfigBridge, Namespace as NamespaceBridge,
-    NetworkConfig as NetworkConfigBridge, Paginator as PaginatorBridge,
-    PaginatorEvents as PaginatorEventsBridge, ProtocolsError as ProtocolsErrorBridge,
-    ProtocolsSignaturesInfo as ProtocolsSignaturesInfoBridge, RegisterData as RegisterDataBridge,
-    RejectRequestInfo as RejectRequestInfoBridge, RequestData as RequestDataBridge,
-    RequestInfo as RequestInfoBridge, RoutingConfig as RoutingConfigBridge,
-    RoutingNode as RoutingNodeBridge, SignatureInfo as SignatureInfoBridge,
-    SignaturesInfo as SignaturesInfoBridge, SignedInfo as SignedInfoBridge,
-    SubjectInfo as SubjectInfoBridge, TellConfig as TellConfigBridge,
-    TimeOutResponseInfo as TimeOutResponseInfoBridge,
-    TransferRequestInfo as TransferRequestInfoBridge, TransferSubject as TransferSubjectBridge,
-    config::Config as ConfigBridge,
+    config::Config as ConfigBridge, ApprovalReqInfo as ApprovalReqInfoBridge, ApproveInfo as ApproveInfoBridge, ConfirmRequestInfo as ConfirmRequestInfoBridge, ControlListConfig as ControlListConfigBridge, CreateRequestInfo as CreateRequestInfoBridge, EOLRequestInfo as EOLRequestInfoBridge, EventInfo as EventInfoBridge, EventRequestInfo as EventRequestInfoBridge, FactInfo as FactInfoBridge, FactRequestInfo as FactRequestInfoBridge, GovsData as GovsDataBridge, KoreConfig as KoreConfigBridge, Namespace as NamespaceBridge, NetworkConfig as NetworkConfigBridge, Paginator as PaginatorBridge, PaginatorEvents as PaginatorEventsBridge, ProtocolsError as ProtocolsErrorBridge, ProtocolsSignaturesInfo as ProtocolsSignaturesInfoBridge, RegisterDataSubj as RegisterDataSubjBridge, RejectRequestInfo as RejectRequestInfoBridge, RequestData as RequestDataBridge, RequestInfo as RequestInfoBridge, RoutingConfig as RoutingConfigBridge, RoutingNode as RoutingNodeBridge, SignatureInfo as SignatureInfoBridge, SignaturesInfo as SignaturesInfoBridge, SignedInfo as SignedInfoBridge, SubjectInfo as SubjectInfoBridge, TellConfig as TellConfigBridge, TimeOutResponseInfo as TimeOutResponseInfoBridge, TransferRequestInfo as TransferRequestInfoBridge, TransferSubject as TransferSubjectBridge
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -156,6 +140,8 @@ pub struct CreateRequestInfo {
     pub governance_id: String,
     pub schema_id: String,
     pub namespace: Namespace,
+    pub name: Option<String>,
+    pub description: Option<String>
 }
 
 impl From<CreateRequestInfoBridge> for CreateRequestInfo {
@@ -164,6 +150,8 @@ impl From<CreateRequestInfoBridge> for CreateRequestInfo {
             governance_id: value.governance_id,
             schema_id: value.schema_id,
             namespace: Namespace::from(value.namespace),
+            description: value.description,
+            name: value.name
         }
     }
 }
@@ -285,6 +273,8 @@ impl From<RequestDataBridge> for RequestData {
 pub struct GovsData {
     pub governance_id: String,
     pub active: bool,
+    pub name: Option<String>,
+    pub description: Option<String>,
 }
 
 impl From<GovsDataBridge> for GovsData {
@@ -292,23 +282,29 @@ impl From<GovsDataBridge> for GovsData {
         Self {
             governance_id: value.governance_id,
             active: value.active,
+            description: value.description,
+            name: value.name
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct RegisterData {
+pub struct RegisterDataSubj {
     pub subject_id: String,
     pub schema: String,
     pub active: bool,
+    pub name: Option<String>,
+    pub description: Option<String>,
 }
 
-impl From<RegisterDataBridge> for RegisterData {
-    fn from(value: RegisterDataBridge) -> Self {
+impl From<RegisterDataSubjBridge> for RegisterDataSubj {
+    fn from(value: RegisterDataSubjBridge) -> Self {
         Self {
             subject_id: value.subject_id,
             schema: value.schema,
             active: value.active,
+            name: value.name,
+            description: value.description
         }
     }
 }
@@ -442,6 +438,8 @@ pub struct SubjectInfo {
     pub sn: u64,
     pub properties: Value,
     pub new_owner: Option<String>,
+    pub name: String,
+    pub description: String
 }
 
 impl From<SubjectInfoBridge> for SubjectInfo {
@@ -458,6 +456,8 @@ impl From<SubjectInfoBridge> for SubjectInfo {
             sn: value.sn,
             properties: value.properties,
             new_owner: value.new_owner,
+            description: value.description,
+            name: value.name
         }
     }
 }

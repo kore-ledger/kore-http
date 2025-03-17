@@ -2,7 +2,7 @@
 
 DOCKER_USERNAME="koreadmin"
 DOCKER_REPO="kore-http"
-TAG_ARRAY=("0.6.7-rockdb-prometheus")
+TAG_ARRAY=("0.6.8-rockdb-prometheus")
 DOCKERFILE_ARRAY=("./kore-http/docker/Dockerfile.rockdb")
 
 

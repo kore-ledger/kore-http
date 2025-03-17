@@ -7,7 +7,7 @@ use crate::{
     enviroment::build_doc,
     error::Error,
     wrappers::{
-        ApproveInfo, Config as ConfigKoreHttp, EventInfo, GovsData, PaginatorEvents, RegisterData,
+        ApproveInfo, Config as ConfigKoreHttp, EventInfo, GovsData, PaginatorEvents, RegisterDataSubj,
         RequestData, RequestInfo, SignaturesInfo, SubjectInfo, TransferSubject,
     },
 };
@@ -560,7 +560,7 @@ async fn get_all_govs(
         ("parameters" = SubjectQuery, Query, description = "The query parameters for the request"),
     ),
     responses(
-        (status = 200, description = "Subjects Data successfully retrieved", body = [RegisterData],
+        (status = 200, description = "Subjects Data successfully retrieved", body = [RegisterDataSubj],
         example = json!(
             [
                 {
@@ -577,7 +577,7 @@ async fn get_all_subjects(
     Extension(bridge): Extension<Arc<Bridge>>,
     Path(governance_id): Path<String>,
     Query(parameters): Query<SubjectQuery>,
-) -> Result<Json<Vec<RegisterData>>, Error> {
+) -> Result<Json<Vec<RegisterDataSubj>>, Error> {
     match bridge
         .get_all_subjs(governance_id, parameters.active, parameters.schema)
         .await
@@ -585,7 +585,7 @@ async fn get_all_subjects(
         Ok(response) => Ok(Json(
             response
                 .iter()
-                .map(|x| RegisterData::from(x.clone()))
+                .map(|x| RegisterDataSubj::from(x.clone()))
                 .collect(),
         )),
         Err(e) => Err(Error::Kore(e.to_string())),
